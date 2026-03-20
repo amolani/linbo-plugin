@@ -34,7 +34,7 @@
 - [x] **CACHE-01**: Multi-School Sync — school-Parameter durchgaengig, bis zu 40 Schulen
 - [ ] **CACHE-02**: Image Caching — Images lokal vorhalten, rsync-Download von Authority Server
 - [ ] **CACHE-03**: Auto-Discovery — automatische Erkennung neuer Clients im Netz
-- [ ] **CACHE-04**: First-Boot Sync — automatischer erster Sync bei neuem Client
+- [x] **CACHE-04**: First-Boot Sync — automatischer erster Sync bei neuem Client
 
 ### Frontend Nativ
 
@@ -98,7 +98,7 @@
 | CACHE-01 | Phase 7 | Complete |
 | CACHE-02 | Phase 7 | Pending |
 | CACHE-03 | Phase 7 | Pending |
-| CACHE-04 | Phase 7 | Pending |
+| CACHE-04 | Phase 7 | Complete |
 | UI-01 | Phase 8 | Pending |
 | UI-02 | Phase 8 | Pending |
 | INST-01 | Phase 1 | Complete |

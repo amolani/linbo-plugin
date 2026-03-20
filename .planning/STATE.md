@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: in-progress
-stopped_at: Completed 07-01-PLAN.md
+stopped_at: Completed 07-02-PLAN.md
 last_updated: "2026-03-20T15:43:50.723Z"
-last_activity: "2026-03-20 -- Completed 07-01: multi-school bug fix + test path repair"
+last_activity: "2026-03-20 -- Completed 07-02: CACHE-01 + CACHE-04 test coverage"
 progress:
   total_phases: 10
   completed_phases: 6
   total_plans: 19
-  completed_plans: 17
-  percent: 89
+  completed_plans: 18
+  percent: 90
 ---
 
 # Project State
@@ -21,23 +21,23 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-19)
 
 **Core value:** Vanilla LINBO unberuehrt lassen, alles ueber eigene API-Schicht ansprechen -- vollwertiger Caching-Satellit
-**Current focus:** Phase 7 in progress. Multi-school bug fix done, test infrastructure repaired. Continuing with image caching and auto-discovery.
+**Current focus:** Phase 7 in progress. Multi-school bug fix done, test coverage added for CACHE-01 + CACHE-04. Continuing with image caching and auto-discovery.
 
 ## Current Position
 
 Phase: 7 of 10 (Caching Satellite Features) -- IN PROGRESS
-Plan: 1 of 3 in current phase (1 complete)
-Status: 07-01 complete -- school param bug fixed, 26 test files repaired, 708/714 tests passing
-Last activity: 2026-03-20 -- Completed 07-01: multi-school bug fix + test path repair
+Plan: 2 of 3 in current phase (2 complete)
+Status: 07-02 complete -- CACHE-01 + CACHE-04 test coverage added (7 passing tests)
+Last activity: 2026-03-20 -- Completed 07-02: CACHE-01 school param tests + CACHE-04 first-boot tests
 
-Progress: [█████████░] 89%
+Progress: [█████████░] 90%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 17
-- Average duration: 6.5 min
-- Total execution time: 1.92 hours
+- Total plans completed: 18
+- Average duration: 6.4 min
+- Total execution time: 2.0 hours
 
 **By Phase:**
 
@@ -49,11 +49,11 @@ Progress: [█████████░] 89%
 | 4. API Filesystem Migration | 3/3 | 20 min | 6.7 min |
 | 5. Dependency Cleanup | 3/3 | 33 min | 11.0 min |
 | 6. Native LINBO File Access | 2/2 | 26 min | 13.0 min |
-| 7. Caching Satellite Features | 1/3 | 9 min | 9.0 min |
+| 7. Caching Satellite Features | 2/3 | 14 min | 7.0 min |
 
 **Recent Trend:**
-- Last 5 plans: 05-02 (11 min), 05-03 (5 min), 06-01 (22 min), 06-02 (4 min), 07-01 (9 min)
-- Trend: Phase 7 started. 1/3 plans complete. Bug fix + test infra repair done.
+- Last 5 plans: 05-03 (5 min), 06-01 (22 min), 06-02 (4 min), 07-01 (9 min), 07-02 (5 min)
+- Trend: Phase 7 progressing. 2/3 plans complete. Bug fix + test coverage done.
 
 *Updated after each plan completion*
 | Phase 04 P02 | 6 min | 1 tasks | 1 files |
@@ -64,6 +64,7 @@ Progress: [█████████░] 89%
 | Phase 06 P01 | 22 min | 2 tasks | 5 files |
 | Phase 06 P02 | 4 min | 2 tasks | 2 files |
 | Phase 07 P01 | 9 min | 1 tasks | 26 files |
+| Phase 07 P02 | 5 min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -130,6 +131,8 @@ Recent decisions affecting current work:
 - [Phase 06-02]: setup-linbo.sh follows identical pattern to setup-dhcp.sh (visudo validation, chmod 440)
 - [Phase 07-01]: Pre-existing DHCP test failures (6 tests) left unfixed -- out of scope, not caused by school param fix
 - [Phase 07-01]: Test path convention: tests/api/services/ and tests/api/routes/ use ../../../src/ to reach project root src/
+- [Phase 07-02]: Pure function extraction for first-boot test -- avoids requiring index.js which triggers server startup
+- [Phase 07-02]: CACHE-01 test verifies stats counter not Redis state to avoid coupling to reconcileFullSnapshot behavior
 
 ### Pending Todos
 
@@ -144,6 +147,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-20T15:43:50.718Z
-Stopped at: Completed 07-01-PLAN.md
+Last session: 2026-03-20T15:53:30Z
+Stopped at: Completed 07-02-PLAN.md
 Resume file: None
