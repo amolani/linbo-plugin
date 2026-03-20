@@ -63,6 +63,7 @@ run_prerequisites() {
     check_prereq "openssl" "command -v openssl" "Run ./install.sh first"
     check_prereq "curl" "command -v curl" "Run ./install.sh first"
     check_prereq "jq" "command -v jq" "Run ./install.sh first"
+    check_prereq "ssh-keygen" "command -v ssh-keygen" "Install openssh-client: apt install openssh-client"
 
     # Disk space (2GB minimum)
     local avail_kb
@@ -422,6 +423,42 @@ create_linbo_user() {
 }
 
 # =============================================================================
+# SSH Key: provision /etc/linuxmuster/linbo/linbo_client_key for API access
+# =============================================================================
+_ensure_linbo_ssh_key() {
+    log_info "Provisioning LINBO SSH client key..."
+
+    local key_path="/root/.ssh/id_rsa"
+    local key_copy="/etc/linuxmuster/linbo/linbo_client_key"
+
+    # Remove if it is a directory (broken setup artifact on 10.40.0.10)
+    if [ -d "$key_path" ]; then
+        log_warn "$key_path is a directory — removing and regenerating"
+        rm -rf "$key_path" "${key_path}.pub"
+    fi
+
+    # Generate if missing
+    if [ ! -f "$key_path" ]; then
+        log_info "Generating SSH client key for LINBO..."
+        mkdir -p /root/.ssh
+        chmod 700 /root/.ssh
+        ssh-keygen -m PEM -t rsa -b 3072 -N "" -f "$key_path" -q
+        log_ok "Generated: $key_path"
+    else
+        log_ok "Existing key: $key_path"
+    fi
+
+    # Ensure /etc/linuxmuster/linbo/ exists (created by linuxmuster-linbo7 APT install)
+    mkdir -p /etc/linuxmuster/linbo
+
+    # Copy to API-readable location (linbo user cannot traverse /root/.ssh/ dir)
+    cp "$key_path" "$key_copy"
+    chown root:linbo "$key_copy"
+    chmod 640 "$key_copy"
+    log_ok "LINBO client key installed: $key_copy (root:linbo 640)"
+}
+
+# =============================================================================
 # 8. Existing .env handling
 # =============================================================================
 handle_existing_env() {
@@ -513,6 +550,9 @@ ADMIN_PASSWORD=Muster!
 
 # === TLS ===
 NODE_TLS_REJECT_UNAUTHORIZED=0
+
+# === SSH ===
+LINBO_CLIENT_SSH_KEY=/etc/linuxmuster/linbo/linbo_client_key
 
 # === Optional overrides ===
 # HOST_SCAN_INTERVAL_SEC=60
@@ -693,6 +733,7 @@ main() {
     prompt_dhcp_interface
     setup_directories
     create_linbo_user
+    _ensure_linbo_ssh_key
     handle_existing_env
     write_env
     generate_setup_ini
