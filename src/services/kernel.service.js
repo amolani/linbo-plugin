@@ -14,7 +14,7 @@ const execFileAsync = promisify(execFile);
 // Constants
 // =============================================================================
 
-const KERNEL_VAR_DIR = process.env.KERNEL_VAR_DIR || '/var/lib/linuxmuster/linbo/current';
+const KERNEL_VAR_DIR = process.env.KERNEL_VAR_DIR || '/var/lib/linuxmuster/linbo';
 const CONFIG_DIR = process.env.CONFIG_DIR || process.env.LINBO_CONFIG_DIR || '/etc/linuxmuster/linbo';
 const LINBO_DIR = process.env.LINBO_DIR || process.env.LINBO_DATA_DIR || '/srv/linbo';
 

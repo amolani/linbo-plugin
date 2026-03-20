@@ -458,6 +458,11 @@ _ensure_linbo_ssh_key() {
     chown root:linbo "$api_key"
     chmod 640 "$api_key"
     log_ok "SSH key: $key_path (600) + API copy: $api_key (640 root:linbo)"
+
+    # Grant linbo group write access to /etc/linuxmuster/linbo/ for kernel state, rebuild locks
+    chown root:linbo /etc/linuxmuster/linbo
+    chmod 775 /etc/linuxmuster/linbo
+    log_ok "Permissions set: /etc/linuxmuster/linbo (775 root:linbo)"
 }
 
 # =============================================================================
