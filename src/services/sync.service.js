@@ -28,6 +28,36 @@ const execFileAsync = promisify(execFile);
 const LINBO_DIR = process.env.LINBO_DIR || '/srv/linbo';
 const DHCP_CONFIG_DIR = process.env.DHCP_CONFIG_DIR || '/etc/dhcp';
 
+/**
+ * Write devices.csv to LMN standard path: /etc/linuxmuster/sophomorix/{school}/devices.csv
+ * Called after host sync and after full snapshot reconciliation.
+ */
+async function writeDevicesCsv(client, school, hosts) {
+  try {
+    // If no hosts passed, read all from store
+    if (!hosts || hosts.length === 0) {
+      const macs = await client.smembers(KEY.HOST_INDEX);
+      hosts = [];
+      for (const mac of macs) {
+        const json = await client.get(`${KEY.HOST}${mac}`);
+        if (json) hosts.push(JSON.parse(json));
+      }
+    }
+    if (hosts.length === 0) return;
+
+    const devicesDir = path.join('/etc/linuxmuster/sophomorix', school);
+    await fsp.mkdir(devicesDir, { recursive: true });
+    const csvHeader = '# room;hostname;hostgroup;mac;ip;officeip;sophomorixRole;sophomorixComment;pxeFlag;lmnReserved10;lmnReserved11;lmnReserved12;lmnReserved13;lmnReserved14;sophomorixDnsNodename';
+    const csvLines = hosts.map(h =>
+      `${h.room || ''};${h.hostname || ''};${h.hostgroup || ''};${h.mac || ''};${h.ip || ''};;student;;;${h.pxeFlag || 0};;;;;;`
+    );
+    await atomicWrite(path.join(devicesDir, 'devices.csv'), [csvHeader, ...csvLines].join('\n') + '\n');
+    console.log(`[Sync] Wrote devices.csv to ${devicesDir} (${hosts.length} hosts)`);
+  } catch (e) {
+    console.error('[Sync] Failed to write devices.csv:', e.message);
+  }
+}
+
 // Redis key prefixes
 const KEY = {
   CURSOR: 'sync:cursor',
@@ -188,18 +218,7 @@ async function syncOnce() {
       try { ws.broadcast('sync.progress', { phase: 'hosts', stats: { hosts: stats.hosts } }); } catch {} // WS broadcast: no clients is normal
 
       // Write devices.csv in LMN standard path (/etc/linuxmuster/sophomorix/{school}/devices.csv)
-      try {
-        const devicesDir = path.join('/etc/linuxmuster/sophomorix', school);
-        await fsp.mkdir(devicesDir, { recursive: true });
-        const csvHeader = '# room;hostname;hostgroup;mac;ip;officeip;sophomorixRole;sophomorixComment;pxeFlag;lmnReserved10;lmnReserved11;lmnReserved12;lmnReserved13;lmnReserved14;sophomorixDnsNodename';
-        const csvLines = hosts.map(h =>
-          `${h.room || ''};${h.hostname || ''};${h.hostgroup || ''};${h.mac || ''};${h.ip || ''};;student;;;${h.pxeFlag || 0};;;;;;`
-        );
-        await atomicWrite(path.join(devicesDir, 'devices.csv'), [csvHeader, ...csvLines].join('\n') + '\n');
-        console.log(`[Sync] Wrote devices.csv to ${devicesDir} (${hosts.length} hosts)`);
-      } catch (e) {
-        console.error('[Sync] Failed to write devices.csv:', e.message);
-      }
+      await writeDevicesCsv(client, school, hosts);
     }
 
     // 6. Handle deletions — start.confs
@@ -329,6 +348,9 @@ async function syncOnce() {
     await client.set(KEY.SERVER_IP, serverIp);
     await client.set(KEY.LAST_SYNC, new Date().toISOString());
     await client.set(KEY.LAST_ERROR, '');
+
+    // Always write devices.csv at end of sync (uses hosts from store if delta was empty)
+    await writeDevicesCsv(client, school, null);
 
     const elapsed = Date.now() - startTime;
     console.log(`[Sync] Completed in ${elapsed}ms: ${JSON.stringify(stats)}`);

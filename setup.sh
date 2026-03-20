@@ -401,6 +401,12 @@ create_linbo_user() {
     chown -R linbo:linbo /srv/linbo-api
     log_ok "Ownership set: /srv/linbo-api (linbo:linbo)"
 
+    # Sophomorix dir for devices.csv (written by sync service in LMN standard path)
+    if [[ -d /etc/linuxmuster/sophomorix ]]; then
+        chown -R linbo:linbo /etc/linuxmuster/sophomorix
+        log_ok "Ownership set: /etc/linuxmuster/sophomorix (linbo:linbo)"
+    fi
+
     # /srv/linbo is created by linuxmuster-linbo7 APT install — grant linbo write to specific subdirs
     # (Full /srv/linbo stays root:root 755 so tftpd-hpa tftp user can read all files)
     if [[ -d /srv/linbo ]]; then
