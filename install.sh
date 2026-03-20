@@ -186,11 +186,53 @@ install_packages() {
 }
 
 # =============================================================================
+# Clean Docker/iptables residue
+# =============================================================================
+clean_docker_firewall_residue() {
+    # If Docker was previously installed, it leaves iptables/nftables chains
+    # that can block DHCP, TFTP, and rsync traffic. Clean them up.
+    if iptables -L DOCKER -n &>/dev/null || nft list table ip docker &>/dev/null; then
+        log_info "Cleaning Docker firewall residue..."
+
+        # Remove Docker iptables chains
+        for chain in DOCKER DOCKER-ISOLATION-STAGE-1 DOCKER-ISOLATION-STAGE-2 DOCKER-USER; do
+            iptables -F "$chain" 2>/dev/null || true
+            iptables -X "$chain" 2>/dev/null || true
+        done
+
+        # Remove Docker FORWARD rules referencing docker0
+        iptables -D FORWARD -o docker0 -j DOCKER 2>/dev/null || true
+        iptables -D FORWARD -o docker0 -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT 2>/dev/null || true
+        iptables -D FORWARD -i docker0 ! -o docker0 -j ACCEPT 2>/dev/null || true
+        iptables -D FORWARD -i docker0 -o docker0 -j ACCEPT 2>/dev/null || true
+
+        # Remove Docker NAT rules
+        iptables -t nat -F DOCKER 2>/dev/null || true
+        iptables -t nat -X DOCKER 2>/dev/null || true
+        iptables -t nat -D PREROUTING -m addrtype --dst-type LOCAL -j DOCKER 2>/dev/null || true
+        iptables -t nat -D OUTPUT -m addrtype --dst-type LOCAL -j DOCKER 2>/dev/null || true
+
+        # Flush nftables Docker tables (if nft is available)
+        if command -v nft &>/dev/null; then
+            nft flush ruleset 2>/dev/null || true
+        fi
+
+        # Ensure FORWARD policy is ACCEPT (Docker sets it to DROP)
+        iptables -P FORWARD ACCEPT 2>/dev/null || true
+
+        log_ok "Docker firewall residue cleaned"
+    else
+        log_ok "No Docker firewall residue detected"
+    fi
+}
+
+# =============================================================================
 # Main
 # =============================================================================
 main() {
     print_banner
     check_root
+    clean_docker_firewall_residue
     install_packages
 
     echo -e "${GREEN}+--------------------------------------------------+${NC}"
