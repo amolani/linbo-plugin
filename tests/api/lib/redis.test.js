@@ -1,182 +1,146 @@
 /**
- * LINBO Docker - Redis delPattern Tests
- * Tests for SCAN-based delPattern replacing KEYS command
+ * LINBO Docker - Redis Delegate Tests (Phase 4: store.js backend)
+ *
+ * Tests that redis.js correctly delegates to store.js.
+ * No ioredis mock needed — store.js is the real in-memory backend.
  */
 
-const { EventEmitter } = require('events');
+const store = require('../../../src/lib/store');
+const redis = require('../../../src/lib/redis');
 
-// Mock ioredis before requiring redis module
-const mockPipeline = {
-  del: jest.fn().mockReturnThis(),
-  exec: jest.fn().mockResolvedValue([]),
-};
-
-const mockClient = {
-  scanStream: jest.fn(),
-  pipeline: jest.fn(() => mockPipeline),
-  on: jest.fn().mockReturnThis(),
-};
-
-jest.mock('ioredis', () => {
-  return jest.fn(() => mockClient);
-});
-
-const redis = require('../../src/lib/redis');
-
-describe('redis delPattern', () => {
+describe('redis.js delegate to store.js', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
-    mockPipeline.del.mockReturnThis();
-    mockPipeline.exec.mockResolvedValue([]);
+    store.reset();
   });
 
-  /**
-   * Helper: create a controllable scanStream emitter
-   */
-  function createScanStream(batches) {
-    const emitter = new EventEmitter();
-    // Track pause/resume
-    emitter.pause = jest.fn();
-    emitter.resume = jest.fn();
-    emitter.destroy = jest.fn();
+  // --- getClient / getSubscriber ---
 
-    mockClient.scanStream.mockReturnValue(emitter);
-
-    // Emit batches async to allow the listener to attach
-    process.nextTick(() => {
-      for (const batch of batches) {
-        emitter.emit('data', batch);
-      }
-      emitter.emit('end');
+  describe('getClient / getSubscriber', () => {
+    test('getClient() returns store.client', () => {
+      expect(redis.getClient()).toBe(store.client);
     });
 
-    return emitter;
-  }
-
-  test('should return 0 when no keys match pattern', async () => {
-    createScanStream([]);
-
-    const count = await redis.delPattern('nonexistent:*');
-
-    expect(count).toBe(0);
-    expect(mockClient.scanStream).toHaveBeenCalledWith({
-      match: 'nonexistent:*',
-      count: 100,
-    });
-    // No pipeline created for empty result
-    expect(mockClient.pipeline).not.toHaveBeenCalled();
-  });
-
-  test('should return 0 when stream emits empty array', async () => {
-    createScanStream([[]]);
-
-    const count = await redis.delPattern('empty:*');
-
-    expect(count).toBe(0);
-    // Empty batch should be skipped -- no pipeline created
-    expect(mockClient.pipeline).not.toHaveBeenCalled();
-  });
-
-  test('should delete single batch of 3 keys and return 3', async () => {
-    const keys = ['host:1', 'host:2', 'host:3'];
-    const stream = createScanStream([keys]);
-
-    const count = await redis.delPattern('host:*');
-
-    expect(count).toBe(3);
-    expect(mockClient.pipeline).toHaveBeenCalledWith(
-      keys.map(k => ['del', k])
-    );
-    expect(mockPipeline.exec).toHaveBeenCalledTimes(1);
-    // Stream should be paused during pipeline exec
-    expect(stream.pause).toHaveBeenCalled();
-  });
-
-  test('should accumulate count across multiple batches', async () => {
-    // Two separate batches
-    const batch1 = ['img:1', 'img:2'];
-    const batch2 = ['img:3', 'img:4', 'img:5'];
-
-    // Need async handling for pause/resume across batches
-    const emitter = new EventEmitter();
-    emitter.pause = jest.fn();
-    emitter.resume = jest.fn();
-    emitter.destroy = jest.fn();
-
-    mockClient.scanStream.mockReturnValue(emitter);
-
-    // When pause is called, we need to hold, then on exec completion, resume emits next batch
-    let batchIndex = 0;
-    const batches = [batch1, batch2];
-
-    mockPipeline.exec.mockImplementation(() => {
-      return new Promise(resolve => {
-        process.nextTick(() => {
-          resolve([]);
-          // After exec resolves and stream.resume() is called, emit next batch or end
-          process.nextTick(() => {
-            batchIndex++;
-            if (batchIndex < batches.length) {
-              emitter.emit('data', batches[batchIndex]);
-            } else {
-              emitter.emit('end');
-            }
-          });
-        });
-      });
+    test('getSubscriber() returns store.client (same object)', () => {
+      expect(redis.getSubscriber()).toBe(store.client);
     });
 
-    // Start the first batch
-    process.nextTick(() => {
-      emitter.emit('data', batches[0]);
+    test('getClient().status is "ready"', () => {
+      expect(redis.getClient().status).toBe('ready');
     });
-
-    const count = await redis.delPattern('img:*');
-
-    expect(count).toBe(5);
-    expect(mockClient.pipeline).toHaveBeenCalledTimes(2);
   });
 
-  test('should propagate pipeline errors', async () => {
-    const keys = ['err:1'];
-    const emitter = new EventEmitter();
-    emitter.pause = jest.fn();
-    emitter.resume = jest.fn();
-    emitter.destroy = jest.fn();
+  // --- disconnect ---
 
-    mockClient.scanStream.mockReturnValue(emitter);
-    mockPipeline.exec.mockRejectedValue(new Error('Pipeline failed'));
-
-    process.nextTick(() => {
-      emitter.emit('data', keys);
+  describe('disconnect', () => {
+    test('disconnect() calls store.flushToDisk()', async () => {
+      const spy = jest.spyOn(store, 'flushToDisk').mockResolvedValue();
+      await redis.disconnect();
+      expect(spy).toHaveBeenCalledTimes(1);
+      spy.mockRestore();
     });
-
-    await expect(redis.delPattern('err:*')).rejects.toThrow('Pipeline failed');
-    expect(emitter.destroy).toHaveBeenCalled();
   });
 
-  test('should propagate stream errors', async () => {
-    const emitter = new EventEmitter();
-    emitter.pause = jest.fn();
-    emitter.resume = jest.fn();
-    emitter.destroy = jest.fn();
+  // --- healthCheck ---
 
-    mockClient.scanStream.mockReturnValue(emitter);
-
-    process.nextTick(() => {
-      emitter.emit('error', new Error('Stream error'));
+  describe('healthCheck', () => {
+    test('healthCheck() returns healthy status', async () => {
+      const result = await redis.healthCheck();
+      expect(result).toEqual({ status: 'healthy', message: 'store ready' });
     });
-
-    await expect(redis.delPattern('broken:*')).rejects.toThrow('Stream error');
   });
 
-  test('should use scanStream not client.keys', async () => {
-    createScanStream([]);
+  // --- get / set / del ---
 
-    await redis.delPattern('test:*');
+  describe('get / set / del wrappers', () => {
+    test('get() returns null for missing key', async () => {
+      const val = await redis.get('nonexistent');
+      expect(val).toBeNull();
+    });
 
-    expect(mockClient.scanStream).toHaveBeenCalled();
-    // client.keys should not exist on mock (never called)
-    expect(mockClient.keys).toBeUndefined();
+    test('set() then get() round-trips JSON', async () => {
+      await redis.set('test:obj', { name: 'Alice', age: 30 });
+      const val = await redis.get('test:obj');
+      expect(val).toEqual({ name: 'Alice', age: 30 });
+    });
+
+    test('set() with TTL uses setex', async () => {
+      await redis.set('test:ttl', 'value', 60);
+      const val = await redis.get('test:ttl');
+      expect(val).toBe('value');
+    });
+
+    test('del() removes the key', async () => {
+      await redis.set('test:del', 'bye');
+      await redis.del('test:del');
+      const val = await redis.get('test:del');
+      expect(val).toBeNull();
+    });
+
+    test('get() returns parsed JSON for arrays', async () => {
+      await redis.set('test:arr', [1, 2, 3]);
+      const val = await redis.get('test:arr');
+      expect(val).toEqual([1, 2, 3]);
+    });
+  });
+
+  // --- delPattern ---
+
+  describe('delPattern', () => {
+    test('returns 0 when no keys match', async () => {
+      const count = await redis.delPattern('nonexistent:*');
+      expect(count).toBe(0);
+    });
+
+    test('deletes all keys matching pattern', async () => {
+      const client = store.client;
+      await client.set('host:1', 'a');
+      await client.set('host:2', 'b');
+      await client.set('host:3', 'c');
+      await client.set('other:1', 'x');
+
+      const count = await redis.delPattern('host:*');
+      expect(count).toBe(3);
+
+      // Verify host keys are gone
+      expect(await client.get('host:1')).toBeNull();
+      expect(await client.get('host:2')).toBeNull();
+      expect(await client.get('host:3')).toBeNull();
+      // Other key untouched
+      expect(await client.get('other:1')).toBe('x');
+    });
+
+    test('returns 0 when stream emits empty set', async () => {
+      // No keys in store at all
+      const count = await redis.delPattern('empty:*');
+      expect(count).toBe(0);
+    });
+  });
+
+  // --- publish / subscribe ---
+
+  describe('publish / subscribe (no-ops)', () => {
+    test('publish() does not throw', async () => {
+      await expect(redis.publish('test-channel', { hello: 'world' })).resolves.not.toThrow();
+    });
+
+    test('subscribe() does not throw', async () => {
+      await expect(redis.subscribe('test-channel', () => {})).resolves.not.toThrow();
+    });
+  });
+
+  // --- No ioredis dependency ---
+
+  describe('no ioredis dependency', () => {
+    test('redis.js source does not contain ioredis require', () => {
+      const fs = require('fs');
+      const source = fs.readFileSync(require.resolve('../../../src/lib/redis'), 'utf8');
+      expect(source).not.toMatch(/require\(['"]ioredis['"]\)/);
+    });
+
+    test('redis.js source requires ./store', () => {
+      const fs = require('fs');
+      const source = fs.readFileSync(require.resolve('../../../src/lib/redis'), 'utf8');
+      expect(source).toMatch(/require\(['"]\.\/store['"]\)/);
+    });
   });
 });
