@@ -19,6 +19,31 @@ jest.mock('../../../src/lib/redis', () => {
   };
 });
 
+// Mock websocket (broadcast is called on status transitions)
+jest.mock('../../../src/lib/websocket', () => ({ broadcast: jest.fn() }));
+
+// Mock hwinfo-scanner (dynamic require inside scanAll)
+jest.mock('../../../src/services/hwinfo-scanner.service', () => ({
+  scanHost: jest.fn().mockResolvedValue(undefined),
+}));
+
+// Mock net — control TCP probe results (always simulate "online")
+jest.mock('net', () => {
+  const EventEmitter = require('events');
+  return {
+    Socket: jest.fn().mockImplementation(() => {
+      const sock = new EventEmitter();
+      sock.setTimeout = jest.fn();
+      sock.destroy = jest.fn();
+      sock.connect = jest.fn(function (port, ip) {
+        // Simulate port-open (online) by default
+        setImmediate(() => sock.emit('connect'));
+      });
+      return sock;
+    }),
+  };
+});
+
 const store = require('../../../src/lib/store');
 
 describe('host-status worker — store.js backing (API-03)', () => {
@@ -103,5 +128,50 @@ describe('host-status worker — store.js backing (API-03)', () => {
       // If status is not 'ready', every scan cycle silently aborts
       expect(client.status).toBe('ready');
     });
+  });
+});
+
+describe('hwinfo auto-trigger (SSH-03)', () => {
+  let hwinfoScanner;
+  let client;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    store.reset();
+    client = store.client;
+    hwinfoScanner = require('../../../src/services/hwinfo-scanner.service');
+  });
+
+  test('scanHost() called for online host with no cached hwinfo', async () => {
+    // Seed a host in the store (mimics sync:host:index + sync:host:{mac})
+    await client.sadd('sync:host:index', 'AA:BB:CC:DD:EE:01');
+    await client.set('sync:host:AA:BB:CC:DD:EE:01', JSON.stringify({
+      ip: '10.40.0.105',
+      mac: 'AA:BB:CC:DD:EE:01',
+      hostname: 'client-test-01',
+    }));
+    // No hwinfo key — triggers auto-scan
+
+    const worker = require('../../../src/workers/host-status.worker');
+    await worker.scanAll();
+
+    expect(hwinfoScanner.scanHost).toHaveBeenCalledWith('10.40.0.105', 'AA:BB:CC:DD:EE:01');
+    expect(hwinfoScanner.scanHost).toHaveBeenCalledTimes(1);
+  });
+
+  test('scanHost() NOT called when hwinfo already cached', async () => {
+    await client.sadd('sync:host:index', 'AA:BB:CC:DD:EE:02');
+    await client.set('sync:host:AA:BB:CC:DD:EE:02', JSON.stringify({
+      ip: '10.40.0.106',
+      mac: 'AA:BB:CC:DD:EE:02',
+      hostname: 'client-test-02',
+    }));
+    // Pre-seed hwinfo cache — must prevent auto-scan
+    await client.set('hwinfo:AA:BB:CC:DD:EE:02', JSON.stringify({ vendor: 'ASUS' }));
+
+    const worker = require('../../../src/workers/host-status.worker');
+    await worker.scanAll();
+
+    expect(hwinfoScanner.scanHost).not.toHaveBeenCalled();
   });
 });
