@@ -136,7 +136,12 @@ Plans:
   2. A LINBO image requested by a client that is not yet cached locally is downloaded from the Authority Server via rsync and served to the client from local storage on subsequent requests
   3. A new client that has never contacted the server is detected automatically within the configured discovery interval — no manual registration needed
   4. A client that boots for the first time triggers an automatic sync without admin interaction — the sync log shows "first-boot" origin
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+- [ ] 07-01-PLAN.md — Fix school param bug (sync.service.js line 151) + fix 26 broken test path shims
+- [ ] 07-02-PLAN.md — Write missing tests: sync.service.school.test.js (CACHE-01) + startup-first-boot.test.js (CACHE-04)
+- [ ] 07-03-PLAN.md — Deploy to 10.40.0.10 + human verification of all four CACHE features
 
 ### Phase 8: Frontend Build + nginx
 **Goal**: The React frontend is built as static files and served by native nginx, with the API and WebSocket correctly proxied — an admin can open the browser and see the dashboard
@@ -183,8 +188,8 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 3. DHCP + PXE Boot | 3/3 | Complete | 2026-03-20 |
 | 4. API Filesystem Migration | 3/3 | Complete | 2026-03-20 |
 | 5. Dependency Cleanup | 3/3 | Complete | 2026-03-20 |
-| 6. Native LINBO File Access | 0/2 | Not started | - |
-| 7. Caching-Satellite Features | 0/? | Not started | - |
+| 6. Native LINBO File Access | 2/2 | Complete | 2026-03-20 |
+| 7. Caching-Satellite Features | 0/3 | Not started | - |
 | 8. Frontend Build + nginx | 0/? | Not started | - |
 | 9. Docker Artifact Removal | 0/? | Not started | - |
 | 10. End-to-End Verification | 0/? | Not started | - |
