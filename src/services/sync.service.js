@@ -29,6 +29,36 @@ const LINBO_DIR = process.env.LINBO_DIR || '/srv/linbo';
 const DHCP_CONFIG_DIR = process.env.DHCP_CONFIG_DIR || '/etc/dhcp';
 
 /**
+ * Fix double school-prefix in DHCP device configs.
+ *
+ * The Authority API prepends the school name to hostnames that already
+ * include it, producing e.g. "schule-d-schule-d-pc01" instead of
+ * "schule-d-pc01". This affects `host <name>` identifiers and
+ * `option host-name "<name>"` values in the ISC DHCP config.
+ *
+ * This function replaces every occurrence of `{school}-{school}-` with
+ * `{school}-` in the devices config text.
+ *
+ * @param {string} devicesContent - Raw ISC DHCP devices config text
+ * @param {string} school - School name (e.g. "schule-d")
+ * @returns {string} Fixed config text
+ */
+function fixDhcpDoublePrefix(devicesContent, school) {
+  if (!devicesContent || !school || school === 'default-school') {
+    return devicesContent;
+  }
+  const doublePrefix = `${school}-${school}-`;
+  const singlePrefix = `${school}-`;
+  // Only replace if the double-prefix actually exists (avoid unnecessary work)
+  if (!devicesContent.includes(doublePrefix)) {
+    return devicesContent;
+  }
+  const fixed = devicesContent.split(doublePrefix).join(singlePrefix);
+  console.log(`[Sync] Fixed DHCP double-prefix: "${doublePrefix}" → "${singlePrefix}"`);
+  return fixed;
+}
+
+/**
  * Write devices.csv to LMN standard path: /etc/linuxmuster/sophomorix/{school}/devices.csv
  * Called after host sync and after full snapshot reconciliation.
  */
@@ -278,7 +308,8 @@ async function syncOnce() {
           console.log('[Sync] Wrote subnets.conf to', DHCP_CONFIG_DIR);
         }
         if (dhcpResult.devices != null) {
-          await atomicWrite(path.join(devicesDir, `${school}.conf`), dhcpResult.devices);
+          const fixedDevices = fixDhcpDoublePrefix(dhcpResult.devices, school);
+          await atomicWrite(path.join(devicesDir, `${school}.conf`), fixedDevices);
           console.log(`[Sync] Wrote devices/${school}.conf to`, devicesDir);
         }
 
@@ -621,5 +652,6 @@ module.exports = {
   loadAllConfigsFromRedis,
   reconcileFullSnapshot,
   reconcileUniverseLists,
+  fixDhcpDoublePrefix,
   KEY,
 };
