@@ -106,7 +106,12 @@ Plans:
   2. No occurrence of Docker internal DNS names (linbo-api:3000, linbo-cache:6379) remains in any config or source file
   3. GET /api/v1/health returns 200 and reports a native filesystem/service status — not a Redis connection status
   4. The container-logs endpoint returns a clear "not available in native mode" response instead of crashing or hanging
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+- [ ] 05-01-PLAN.md — RED test suites: containerLogs.test.js (API-05/06/08) + health.test.js (API-07)
+- [ ] 05-02-PLAN.md — containerLogs.js journald rewrite + Docker hostname fixes + health filesystem check (GREEN)
+- [ ] 05-03-PLAN.md — npm uninstall ioredis dockerode rate-limit-redis + full suite regression check
 
 ### Phase 6: Native LINBO File Access
 **Goal**: The API reads host lists, start.confs, and GRUB configs directly from /srv/linbo/ filesystem paths, and can trigger rsync and TFTP service restarts through systemd without any Docker indirection
@@ -172,8 +177,8 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 1. Install Scripts | 2/2 | Complete | 2026-03-19 |
 | 2. systemd Units + Boot Scaffold | 3/3 | Complete | 2026-03-19 |
 | 3. DHCP + PXE Boot | 3/3 | Complete | 2026-03-20 |
-| 4. API Filesystem Migration | 0/3 | Not started | - |
-| 5. Dependency Cleanup | 0/? | Not started | - |
+| 4. API Filesystem Migration | 3/3 | Complete | 2026-03-20 |
+| 5. Dependency Cleanup | 0/3 | Not started | - |
 | 6. Native LINBO File Access | 0/? | Not started | - |
 | 7. Caching-Satellite Features | 0/? | Not started | - |
 | 8. Frontend Build + nginx | 0/? | Not started | - |
