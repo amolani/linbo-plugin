@@ -186,6 +186,20 @@ async function syncOnce() {
       }
       console.log(`[Sync] Cached ${stats.hosts} host records + symlinks`);
       try { ws.broadcast('sync.progress', { phase: 'hosts', stats: { hosts: stats.hosts } }); } catch {} // WS broadcast: no clients is normal
+
+      // Write devices.csv in LMN standard path (/etc/linuxmuster/sophomorix/{school}/devices.csv)
+      try {
+        const devicesDir = path.join('/etc/linuxmuster/sophomorix', school);
+        await fsp.mkdir(devicesDir, { recursive: true });
+        const csvHeader = '# room;hostname;hostgroup;mac;ip;officeip;sophomorixRole;sophomorixComment;pxeFlag;lmnReserved10;lmnReserved11;lmnReserved12;lmnReserved13;lmnReserved14;sophomorixDnsNodename';
+        const csvLines = hosts.map(h =>
+          `${h.room || ''};${h.hostname || ''};${h.hostgroup || ''};${h.mac || ''};${h.ip || ''};;student;;;${h.pxeFlag || 0};;;;;;`
+        );
+        await atomicWrite(path.join(devicesDir, 'devices.csv'), [csvHeader, ...csvLines].join('\n') + '\n');
+        console.log(`[Sync] Wrote devices.csv to ${devicesDir} (${hosts.length} hosts)`);
+      } catch (e) {
+        console.error('[Sync] Failed to write devices.csv:', e.message);
+      }
     }
 
     // 6. Handle deletions — start.confs
