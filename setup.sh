@@ -528,7 +528,104 @@ ENVEOF
 }
 
 # =============================================================================
-# 11. Enable services
+# 11. Generate setup.ini (required by linbo-configure.sh / update-linbofs)
+# =============================================================================
+generate_setup_ini() {
+    local setup_ini="/var/lib/linuxmuster/setup.ini"
+    local domain="${LINBO_DOMAIN:-linuxmuster.lan}"
+    local server_ip="$LINBO_SERVER_IP"
+    local hostname="${LINBO_HOSTNAME:-linbo-native}"
+    local netmask="${LINBO_NETMASK:-255.255.255.0}"
+    local gateway="${LINBO_GATEWAY:-10.0.0.254}"
+
+    # Derive network values from IP and netmask
+    local bitmask network broadcast
+
+    # Convert netmask to bitmask (CIDR prefix length)
+    bitmask=$(python3 -c "
+import ipaddress, sys
+try:
+    n = ipaddress.IPv4Network('0.0.0.0/${netmask}')
+    print(n.prefixlen)
+except Exception:
+    print('24')
+" 2>/dev/null || echo "24")
+
+    # Derive network and broadcast from IP/bitmask
+    read -r network broadcast < <(python3 -c "
+import ipaddress, sys
+try:
+    n = ipaddress.IPv4Network('${server_ip}/${bitmask}', strict=False)
+    print(n.network_address, n.broadcast_address)
+except Exception:
+    print('10.0.0.0 10.0.0.255')
+" 2>/dev/null || echo "10.0.0.0 10.0.0.255")
+
+    # Derive LDAP / Samba values from domain
+    local realm sambadomain basedn
+    realm=$(echo "$domain" | tr '[:lower:]' '[:upper:]')
+    sambadomain=$(echo "$domain" | cut -d. -f1 | tr '[:lower:]' '[:upper:]')
+    basedn=$(echo "$domain" | sed 's/\./,DC=/g; s/^/DC=/')
+
+    mkdir -p "$(dirname "$setup_ini")"
+    cat > "$setup_ini" << INIEOF
+[setup]
+servername = ${hostname}
+domainname = ${domain}
+serverip = ${server_ip}
+hostname = ${hostname}
+netmask = ${netmask}
+network = ${network}
+broadcast = ${broadcast}
+firewallip = ${gateway}
+gateway = ${gateway}
+bitmask = ${bitmask}
+realm = ${realm}
+sambadomain = ${sambadomain}
+basedn = ${basedn}
+INIEOF
+
+    chmod 600 "$setup_ini"
+    log_ok "Written: ${setup_ini}"
+}
+
+# =============================================================================
+# 12. Fix /etc/hosts (hostname must resolve to real IP, not 127.0.1.1)
+# =============================================================================
+fix_etc_hosts() {
+    local hostname="${LINBO_HOSTNAME:-linbo-native}"
+    local server_ip="$LINBO_SERVER_IP"
+    local domain="${LINBO_DOMAIN:-linuxmuster.lan}"
+    local fqdn="${hostname}.${domain}"
+    local hosts_file="/etc/hosts"
+
+    # Remove any 127.0.1.1 entry for our hostname
+    if grep -q "127\.0\.1\.1.*${hostname}" "$hosts_file" 2>/dev/null; then
+        sed -i "/127\.0\.1\.1.*${hostname}/d" "$hosts_file"
+        log_info "Removed 127.0.1.1 entry for ${hostname} from /etc/hosts"
+    fi
+
+    # Ensure our hostname resolves to the real server IP
+    if grep -qE "^${server_ip}[[:space:]]" "$hosts_file" 2>/dev/null; then
+        # IP already has an entry — update it if hostname is missing
+        if ! grep -qE "^${server_ip}[[:space:]].*${hostname}" "$hosts_file" 2>/dev/null; then
+            sed -i "s|^${server_ip}[[:space:]].*|${server_ip}        ${fqdn}        ${hostname}|" "$hosts_file"
+            log_info "Updated ${server_ip} entry in /etc/hosts"
+        else
+            log_ok "/etc/hosts already has ${server_ip} → ${hostname}"
+            return 0
+        fi
+    else
+        # Add new entry after localhost
+        sed -i "/^127\.0\.0\.1/a ${server_ip}        ${fqdn}        ${hostname}" "$hosts_file"
+        log_info "Added ${server_ip} → ${fqdn} ${hostname} to /etc/hosts"
+    fi
+
+    log_ok "/etc/hosts: ${hostname} → ${server_ip}"
+}
+
+# =============================================================================
+# 13. Enable services
 # =============================================================================
 enable_services() {
     log_info "Enabling services..."
@@ -541,7 +638,7 @@ enable_services() {
 }
 
 # =============================================================================
-# 12. Summary
+# 14. Summary
 # =============================================================================
 print_summary() {
     echo ""
@@ -568,6 +665,7 @@ print_summary() {
     echo "  Admin login:     admin / Muster!"
     echo "  nginx:           ${nginx_status}"
     echo "  .env:            /etc/linbo-native/.env"
+    echo "  setup.ini:       /var/lib/linuxmuster/setup.ini"
     echo ""
     echo "  Next steps:"
     echo "    Run Phase 2 to create systemd units (linbo-api.service)"
@@ -597,6 +695,8 @@ main() {
     create_linbo_user
     handle_existing_env
     write_env
+    generate_setup_ini
+    fix_etc_hosts
     enable_services
     print_summary
 }
