@@ -197,10 +197,10 @@ Plans:
 
 **Milestone Goal:** Every feature that existed in the Docker project works correctly in native mode — verified on real hardware, one category at a time. The API/scripts are fixed as needed; the LINBO package is never modified.
 
-- [ ] **Phase 11: SSH & Terminal** - SSH key-chain configured, browser terminal works, HWInfo-Scanner detects online clients
-- [ ] **Phase 12: Kernel Management** - Kernel variants shown correctly, kernel switch works, active kernel status accurate
-- [ ] **Phase 13: Linbofs Management** - Linbofs status correct, rebuild triggers via API with WebSocket progress, patch status shows hooks
-- [ ] **Phase 14: Firmware Management** - Firmware detect via SSH works, firmware can be added to linbofs64, SSH key confirmed
+- [x] **Phase 11: SSH & Terminal** - SSH key-chain configured, browser terminal works, HWInfo-Scanner detects online clients (completed 2026-03-20)
+- [x] **Phase 12: Kernel Management** - Kernel variants shown correctly, kernel switch works, active kernel status accurate (completed 2026-03-20)
+- [x] **Phase 13: Linbofs Management** - Linbofs status correct, rebuild triggers via API with WebSocket progress, patch status shows hooks (completed 2026-03-20)
+- [x] **Phase 14: Firmware Management** - Firmware detect via SSH works, firmware can be added to linbofs64, SSH key confirmed (completed 2026-03-20)
 - [ ] **Phase 15: GRUB Config Management** - GRUB configs shown per group, regeneration and cleanup work via API
 - [ ] **Phase 16: Driver Management** - Driver profiles managed, match.conf read/write works, HWInfo-Scan via SSH works
 - [ ] **Phase 17: Remote Operations** - Reboot/Halt, Partition/Sync/Start, Wake-on-LAN, and .cmd scheduling all work
@@ -332,10 +332,10 @@ v2.0 phases: 11 → 12 → 13 → 14 → 15 → 16 → 17 → 18 → 19 → 20
 | 8. Frontend Build + nginx | v1.0 | 2/2 | Complete | 2026-03-20 |
 | 9. Docker Artifact Removal | v1.0 | 0/? | Not started | - |
 | 10. End-to-End Verification | v1.0 | 0/? | Not started | - |
-| 11. SSH & Terminal | 2/3 | In Progress|  | - |
-| 12. Kernel Management | v2.0 | 0/? | Not started | - |
-| 13. Linbofs Management | v2.0 | 0/? | Not started | - |
-| 14. Firmware Management | v2.0 | 0/? | Not started | - |
+| 11. SSH & Terminal | 2/3 | Complete    | 2026-03-20 | - |
+| 12. Kernel Management | v2.0 | Complete    | 2026-03-20 | - |
+| 13. Linbofs Management | v2.0 | Complete    | 2026-03-20 | - |
+| 14. Firmware Management | v2.0 | Complete    | 2026-03-20 | - |
 | 15. GRUB Config Management | v2.0 | 0/? | Not started | - |
 | 16. Driver Management | v2.0 | 0/? | Not started | - |
 | 17. Remote Operations | v2.0 | 0/? | Not started | - |
