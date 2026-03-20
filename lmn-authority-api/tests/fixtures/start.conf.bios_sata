@@ -1,0 +1,47 @@
+[LINBO]
+Cache = /dev/sda3
+Server = 10.0.10.1
+Group = bios_sata
+RootTimeout = 600
+AutoPartition = no
+AutoFormat = no
+AutoInitCache = no
+DownloadType = torrent
+GuiDisabled = no
+UseMinimalLayout = no
+Locale = de-de
+SystemType = bios64
+KernelOptions = quiet splash
+
+[Partition]
+Dev = /dev/sda1
+Label = ubuntu
+Size = 50G
+Id = 8300
+FSType = ext4
+Bootable = yes
+
+[Partition]
+Dev = /dev/sda2
+Label = swap
+Size = 4G
+Id = 8200
+FSType = swap
+Bootable = no
+
+[OS]
+Name = Ubuntu 22.04
+Description = Ubuntu 22.04 LTS
+Version = 22.04
+IconName = ubuntu.svg
+BaseImage = ubuntu2204.qcow2
+Boot = /dev/sda1
+Root = /dev/sda1
+Kernel = /boot/vmlinuz
+Initrd = /boot/initrd.img
+Append = ro splash
+StartEnabled = yes
+SyncEnabled = yes
+NewEnabled = yes
+DefaultAction = sync
+Hidden = no

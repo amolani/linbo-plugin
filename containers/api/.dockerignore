@@ -1,0 +1,11 @@
+node_modules
+.git
+.env
+.env.*
+*.md
+tests
+Dockerfile
+.dockerignore
+jest.config.js
+coverage
+.nyc_output

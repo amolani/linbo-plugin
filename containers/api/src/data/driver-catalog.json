@@ -1,0 +1,182 @@
+{
+  "version": 1,
+  "categories": [
+    { "id": "nic", "name": "Netzwerk (NIC)", "icon": "cable" },
+    { "id": "gpu", "name": "Grafik (GPU)", "icon": "monitor" },
+    { "id": "audio", "name": "Audio", "icon": "volume2" },
+    { "id": "chipset", "name": "Chipsatz", "icon": "cpu" },
+    { "id": "storage", "name": "Speicher/SATA", "icon": "hard-drive" },
+    { "id": "wifi", "name": "WLAN", "icon": "wifi" },
+    { "id": "usb", "name": "USB Controller", "icon": "usb" },
+    { "id": "bluetooth", "name": "Bluetooth", "icon": "bluetooth" }
+  ],
+  "vendors": [
+    {
+      "id": "nic-intel",
+      "name": "Intel Ethernet",
+      "category": "nic",
+      "description": "Intel I210, I219, I225, I226 series",
+      "devices": [
+        { "vendor": "8086", "device": "1533", "name": "I210 Gigabit", "suggestedSet": "Intel_NIC_I210" },
+        { "vendor": "8086", "device": "15b8", "name": "I219-V (Kaby Lake)", "suggestedSet": "Intel_NIC_I219" },
+        { "vendor": "8086", "device": "15bb", "name": "I219-LM (Coffee Lake)", "suggestedSet": "Intel_NIC_I219" },
+        { "vendor": "8086", "device": "15bc", "name": "I219-V (Coffee Lake)", "suggestedSet": "Intel_NIC_I219" },
+        { "vendor": "8086", "device": "0d4f", "name": "I219-LM (Comet Lake)", "suggestedSet": "Intel_NIC_I219" },
+        { "vendor": "8086", "device": "0d4e", "name": "I219-V (Comet Lake)", "suggestedSet": "Intel_NIC_I219" },
+        { "vendor": "8086", "device": "15f2", "name": "I225-LM (2.5GbE)", "suggestedSet": "Intel_NIC_I225" },
+        { "vendor": "8086", "device": "15f3", "name": "I225-V (2.5GbE)", "suggestedSet": "Intel_NIC_I225" },
+        { "vendor": "8086", "device": "125b", "name": "I226-LM (2.5GbE)", "suggestedSet": "Intel_NIC_I226" },
+        { "vendor": "8086", "device": "125c", "name": "I226-V (2.5GbE)", "suggestedSet": "Intel_NIC_I226" }
+      ]
+    },
+    {
+      "id": "nic-realtek",
+      "name": "Realtek Ethernet",
+      "category": "nic",
+      "description": "Realtek RTL8111, RTL8168, RTL8125 series",
+      "devices": [
+        { "vendor": "10ec", "device": "8136", "name": "RTL8101E/8102E", "suggestedSet": "Realtek_NIC" },
+        { "vendor": "10ec", "device": "8168", "name": "RTL8111/8168/8211", "suggestedSet": "Realtek_NIC" },
+        { "vendor": "10ec", "device": "8169", "name": "RTL8169", "suggestedSet": "Realtek_NIC" },
+        { "vendor": "10ec", "device": "8125", "name": "RTL8125 (2.5GbE)", "suggestedSet": "Realtek_NIC_2G5" },
+        { "vendor": "10ec", "device": "2600", "name": "RTL8125B (2.5GbE)", "suggestedSet": "Realtek_NIC_2G5" }
+      ]
+    },
+    {
+      "id": "gpu-intel",
+      "name": "Intel Integrated Graphics",
+      "category": "gpu",
+      "description": "Intel UHD, Iris, Arc integrated GPUs",
+      "devices": [
+        { "vendor": "8086", "device": "3e92", "name": "UHD 630 (Coffee Lake)", "suggestedSet": "Intel_GPU_UHD630" },
+        { "vendor": "8086", "device": "3e98", "name": "UHD 630 (Desktop)", "suggestedSet": "Intel_GPU_UHD630" },
+        { "vendor": "8086", "device": "9a49", "name": "UHD Graphics (Tiger Lake)", "suggestedSet": "Intel_GPU_TigerLake" },
+        { "vendor": "8086", "device": "4680", "name": "UHD 770 (Alder Lake S)", "suggestedSet": "Intel_GPU_UHD770" },
+        { "vendor": "8086", "device": "4692", "name": "UHD 730 (Alder Lake S)", "suggestedSet": "Intel_GPU_UHD770" },
+        { "vendor": "8086", "device": "a780", "name": "UHD 770 (Raptor Lake)", "suggestedSet": "Intel_GPU_UHD770" }
+      ]
+    },
+    {
+      "id": "gpu-amd",
+      "name": "AMD Radeon Graphics",
+      "category": "gpu",
+      "description": "AMD Radeon RX, Pro, integrated APU graphics",
+      "devices": [
+        { "vendor": "1002", "device": "1636", "name": "Radeon Renoir (Ryzen 4000)", "suggestedSet": "AMD_GPU_Renoir" },
+        { "vendor": "1002", "device": "1638", "name": "Radeon Cezanne (Ryzen 5000)", "suggestedSet": "AMD_GPU_Cezanne" },
+        { "vendor": "1002", "device": "164e", "name": "Radeon Raphael (Ryzen 7000)", "suggestedSet": "AMD_GPU_Raphael" }
+      ]
+    },
+    {
+      "id": "gpu-nvidia",
+      "name": "NVIDIA GeForce/Quadro",
+      "category": "gpu",
+      "description": "NVIDIA GeForce GTX/RTX, Quadro GPUs",
+      "devices": [
+        { "vendor": "10de", "device": "2504", "name": "GeForce RTX 3060 Ti", "suggestedSet": "NVIDIA_GPU" },
+        { "vendor": "10de", "device": "2782", "name": "GeForce RTX 4070", "suggestedSet": "NVIDIA_GPU" }
+      ]
+    },
+    {
+      "id": "audio-realtek",
+      "name": "Realtek HD Audio",
+      "category": "audio",
+      "description": "Realtek ALC series HDA codecs",
+      "devices": [
+        { "vendor": "10ec", "device": "0255", "name": "ALC255", "suggestedSet": "Realtek_Audio" },
+        { "vendor": "10ec", "device": "0256", "name": "ALC256", "suggestedSet": "Realtek_Audio" },
+        { "vendor": "10ec", "device": "0897", "name": "ALC897", "suggestedSet": "Realtek_Audio" },
+        { "vendor": "10ec", "device": "0700", "name": "ALC700", "suggestedSet": "Realtek_Audio" }
+      ]
+    },
+    {
+      "id": "audio-intel-hda",
+      "name": "Intel HD Audio Controller",
+      "category": "audio",
+      "description": "Intel HDA host controllers",
+      "devices": [
+        { "vendor": "8086", "device": "a171", "name": "Sunrise Point HDA", "suggestedSet": "Intel_Audio_HDA" },
+        { "vendor": "8086", "device": "a348", "name": "Cannon Lake HDA", "suggestedSet": "Intel_Audio_HDA" },
+        { "vendor": "8086", "device": "7ad0", "name": "Alder Lake HDA", "suggestedSet": "Intel_Audio_HDA" }
+      ]
+    },
+    {
+      "id": "chipset-intel",
+      "name": "Intel Chipsatz",
+      "category": "chipset",
+      "description": "Intel SMBus, ME, Thermal, Serial I/O",
+      "devices": [
+        { "vendor": "8086", "device": "a323", "name": "Cannon Lake SMBus", "suggestedSet": "Intel_Chipset_CNL" },
+        { "vendor": "8086", "device": "7aa3", "name": "Alder Lake SMBus", "suggestedSet": "Intel_Chipset_ADL" },
+        { "vendor": "8086", "device": "7a23", "name": "Raptor Lake SMBus", "suggestedSet": "Intel_Chipset_RPL" }
+      ]
+    },
+    {
+      "id": "storage-intel-rst",
+      "name": "Intel SATA/RST",
+      "category": "storage",
+      "description": "Intel AHCI, RST, VMD controllers",
+      "devices": [
+        { "vendor": "8086", "device": "a352", "name": "Cannon Lake AHCI", "suggestedSet": "Intel_Storage_RST" },
+        { "vendor": "8086", "device": "7ae2", "name": "Alder Lake AHCI", "suggestedSet": "Intel_Storage_RST" },
+        { "vendor": "8086", "device": "9a09", "name": "Tiger Lake VMD", "suggestedSet": "Intel_Storage_VMD" },
+        { "vendor": "8086", "device": "467f", "name": "Alder Lake VMD", "suggestedSet": "Intel_Storage_VMD" }
+      ]
+    },
+    {
+      "id": "storage-amd",
+      "name": "AMD SATA/NVMe",
+      "category": "storage",
+      "description": "AMD SATA, NVMe controllers",
+      "devices": [
+        { "vendor": "1022", "device": "7901", "name": "FCH SATA (AHCI)", "suggestedSet": "AMD_Storage" },
+        { "vendor": "1022", "device": "43eb", "name": "500 Series NVMe", "suggestedSet": "AMD_Storage" }
+      ]
+    },
+    {
+      "id": "wifi-intel",
+      "name": "Intel WLAN",
+      "category": "wifi",
+      "description": "Intel Wi-Fi 6/6E/7 adapters",
+      "devices": [
+        { "vendor": "8086", "device": "2723", "name": "Wi-Fi 6 AX200", "suggestedSet": "Intel_WiFi_AX200" },
+        { "vendor": "8086", "device": "2725", "name": "Wi-Fi 6E AX210", "suggestedSet": "Intel_WiFi_AX210" },
+        { "vendor": "8086", "device": "272b", "name": "Wi-Fi 6E AX211", "suggestedSet": "Intel_WiFi_AX210" },
+        { "vendor": "8086", "device": "7a70", "name": "Wi-Fi 7 BE200", "suggestedSet": "Intel_WiFi_BE200" }
+      ]
+    },
+    {
+      "id": "wifi-realtek",
+      "name": "Realtek WLAN",
+      "category": "wifi",
+      "description": "Realtek RTL8821, RTL8852 WLAN",
+      "devices": [
+        { "vendor": "10ec", "device": "c821", "name": "RTL8821CE", "suggestedSet": "Realtek_WiFi" },
+        { "vendor": "10ec", "device": "c852", "name": "RTL8852AE", "suggestedSet": "Realtek_WiFi" },
+        { "vendor": "10ec", "device": "b852", "name": "RTL8852BE", "suggestedSet": "Realtek_WiFi" }
+      ]
+    },
+    {
+      "id": "usb-intel",
+      "name": "Intel USB Controller",
+      "category": "usb",
+      "description": "Intel xHCI USB 3.x controllers",
+      "devices": [
+        { "vendor": "8086", "device": "a36d", "name": "Cannon Lake xHCI", "suggestedSet": "Intel_USB" },
+        { "vendor": "8086", "device": "7ae0", "name": "Alder Lake xHCI", "suggestedSet": "Intel_USB" },
+        { "vendor": "8086", "device": "7a60", "name": "Raptor Lake xHCI", "suggestedSet": "Intel_USB" }
+      ]
+    },
+    {
+      "id": "bluetooth-intel",
+      "name": "Intel Bluetooth",
+      "category": "bluetooth",
+      "description": "Intel Bluetooth 5.x adapters (USB)",
+      "devices": [
+        { "vendor": "8087", "device": "0029", "name": "AX200 Bluetooth", "suggestedSet": "Intel_BT" },
+        { "vendor": "8087", "device": "0032", "name": "AX210 Bluetooth", "suggestedSet": "Intel_BT" },
+        { "vendor": "8087", "device": "0033", "name": "AX211 Bluetooth", "suggestedSet": "Intel_BT" }
+      ]
+    }
+  ]
+}

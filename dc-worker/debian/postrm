@@ -1,0 +1,15 @@
+#!/bin/bash
+set -e
+
+case "$1" in
+  purge)
+    rm -f /etc/macct-worker.conf /etc/linbo-docker-dhcp.conf
+    rm -rf /var/log/macct
+    systemctl daemon-reload
+    ;;
+  remove)
+    systemctl daemon-reload
+    ;;
+esac
+
+exit 0

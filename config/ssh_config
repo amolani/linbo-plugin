@@ -1,0 +1,6 @@
+Host *
+  IdentityFile /root/.ssh/id_rsa
+  StrictHostKeyChecking no
+  UserKnownHostsFile /dev/null
+  LogLevel ERROR
+  Port 2222

@@ -1,0 +1,108 @@
+# =============================================================================
+# LINBO Docker - Git Ignore
+# =============================================================================
+
+# Environment & Secrets
+.env
+.env.local
+.env.*.local
+*.secrets
+secrets/
+
+# Docker volumes data
+volumes/
+postgres_data/
+redis_data/
+
+# Large binary files (images should be downloaded separately)
+*.qcow2
+*.qdiff
+*.cloop
+*.iso
+
+# Deployment packages (build locally)
+*.tar.gz
+*.deb
+
+# DC Worker build artifacts
+dc-worker/pkg-root/
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.npm
+.yarn
+
+# Build outputs
+dist/
+build/
+*.tsbuildinfo
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Python
+__pycache__/
+*.pyc
+.coverage
+
+# Test coverage
+coverage/
+.nyc_output/
+
+# Logs
+logs/
+*.log
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# SSH keys (generated, should not be in repo)
+*_rsa
+*_rsa.pub
+*.pem
+*.key
+
+# Database
+*.sqlite
+*.db
+
+# OS specific
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Backup files
+*.bak
+*.backup
+
+# Claude Code
+.claude/
+
+# Session exports
+2026-*.txt
+
+# Working repo clones
+repo/
+docs/repo/
+docs/export/
+
+# LINBO kernel binary (provisioned at runtime, not in repo)
+linbo64
+
+# Agent templates (tracked under docs/agents/)
+!docs/agents/
+config/linbo_client_key
+config/dropbear_dss_host_key
+config/dropbear_rsa_host_key
+docs/linuxmuster-cachingserver-linbo7-main.zip
+.planning/

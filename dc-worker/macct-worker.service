@@ -1,0 +1,37 @@
+[Unit]
+Description=LINBO Docker Machine Account Worker
+Documentation=https://github.com/amolani/linbo-docker
+After=network.target redis.service
+Wants=network.target
+
+[Service]
+Type=simple
+User=root
+Group=root
+
+# Configuration
+EnvironmentFile=-/etc/macct-worker.conf
+
+# Worker script
+ExecStart=/usr/bin/python3 /usr/local/bin/macct-worker.py --config /etc/macct-worker.conf
+
+# Restart on failure
+Restart=always
+RestartSec=10
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=macct-worker
+
+# Security
+NoNewPrivileges=false
+PrivateTmp=true
+ProtectSystem=false
+
+# Resource limits
+MemoryMax=256M
+CPUQuota=50%
+
+[Install]
+WantedBy=multi-user.target

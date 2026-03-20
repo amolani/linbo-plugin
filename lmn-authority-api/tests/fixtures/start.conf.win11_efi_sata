@@ -1,0 +1,48 @@
+[LINBO]
+Cache = /dev/sda5
+Server = 10.0.10.1
+Group = win11_efi_sata
+RootTimeout = 600
+AutoPartition = no
+AutoFormat = no
+AutoInitCache = no
+DownloadType = torrent
+GuiDisabled = no
+UseMinimalLayout = no
+Locale = de-de
+SystemType = efi64
+KernelOptions = server=10.0.10.1
+
+[Partition]
+Dev = /dev/sda1
+Label = efi
+Size = 512M
+Id = ef00
+FSType = vfat
+Bootable = yes
+
+[Partition]
+Dev = /dev/sda2
+Label = windows
+Size = 80G
+Id = 0700
+FSType = ntfs
+Bootable = no
+
+[Partition]
+Dev = /dev/sda3
+Label = data
+Id = 0700
+FSType = ntfs
+Bootable = no
+
+[OS]
+Name = Windows 11
+Description = Windows 11 Pro Education
+IconName = win11.png
+BaseImage = win11_pro_edu.qcow2
+Boot = /dev/sda2
+StartEnabled = yes
+SyncEnabled = yes
+NewEnabled = yes
+DefaultAction = sync

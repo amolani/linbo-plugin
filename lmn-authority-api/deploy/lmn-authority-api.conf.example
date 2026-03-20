@@ -1,0 +1,51 @@
+# =============================================================================
+# LMN Authority API Configuration
+# =============================================================================
+# Copy to /etc/lmn-authority-api/lmn-authority-api.conf and adjust values.
+# All variables use the LMN_ prefix.
+# =============================================================================
+
+# -- Paths -------------------------------------------------------------------
+# Path to the linuxmuster.net devices.csv file
+LMN_DEVICES_CSV_PATH=/etc/linuxmuster/sophomorix/default-school/devices.csv
+
+# Directory containing start.conf.* files
+LMN_START_CONF_DIR=/srv/linbo
+
+# SQLite database for the delta feed changelog
+LMN_DELTA_DB_PATH=/var/lib/lmn-authority-api/delta.db
+
+# -- Authentication ----------------------------------------------------------
+# Path to bearer token file (one token per line, # comments allowed, mode 0600)
+# This is the PREFERRED method. Falls back to LMN_BEARER_TOKENS if file not found.
+LMN_BEARER_TOKENS_FILE=/etc/lmn-authority-api/tokens.txt
+
+# Comma-separated bearer tokens (FALLBACK if token file not set or not found)
+# LMN_BEARER_TOKENS=token1,token2
+
+# Comma-separated IP networks allowed to access the API (CIDR notation)
+LMN_IP_ALLOWLIST=10.0.0.0/16,127.0.0.0/8,::1/128
+
+# Set to true ONLY if behind a trusted reverse proxy (nginx, traefik)
+# When true, reads X-Forwarded-For header for client IP detection
+LMN_TRUST_PROXY_HEADERS=false
+
+# -- Rate Limiting -----------------------------------------------------------
+# Requests per minute per bearer token (sliding window)
+LMN_RATE_LIMIT_RPM=60
+
+# -- Watcher -----------------------------------------------------------------
+# Debounce interval for filesystem change detection (milliseconds)
+LMN_WATCHER_DEBOUNCE_MS=500
+
+# -- Network Defaults (DHCP export) -----------------------------------------
+LMN_SERVER_IP=10.0.0.1
+LMN_SUBNET=10.0.0.0
+LMN_NETMASK=255.255.0.0
+LMN_GATEWAY=10.0.0.254
+LMN_DNS=10.0.0.1
+LMN_DOMAIN=linuxmuster.lan
+LMN_DHCP_INTERFACE=eth0
+
+# -- Logging -----------------------------------------------------------------
+LMN_LOG_LEVEL=INFO

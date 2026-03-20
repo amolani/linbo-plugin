@@ -1,0 +1,8 @@
+linbo-docker-dc-worker (1.0.0) stable; urgency=low
+
+  * Initial release
+  * Phase 8: Machine account repair via Redis Streams + sam.ldb
+  * Phase 11: Host provisioning via linuxmuster-import-devices
+  * DHCP post-import hook for next-server redirect
+
+ -- LINBO Docker <noreply@linbo-docker.local>  Thu, 06 Feb 2026 12:00:00 +0100

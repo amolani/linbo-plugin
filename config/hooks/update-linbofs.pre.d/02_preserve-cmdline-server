@@ -1,0 +1,59 @@
+#!/bin/bash
+#
+# Pre-repack hook: Patch init.sh to preserve kernel cmdline server= parameter
+# CWD is the extracted linbofs root directory
+#
+# Problem: init.sh do_env() unconditionally overwrites LINBOSERVER with the
+# DHCP serverid when HOSTGROUP is set. In Docker deployments where the DHCP
+# server (e.g. 10.0.0.11) != LINBO server (e.g. 10.0.0.13), this causes the
+# client to rsync from the wrong server -> empty start.conf -> "No OS configured"
+#
+# Fix: Only override LINBOSERVER if server= was NOT explicitly given on the
+# kernel command line. The GRUB config sets server=<docker-ip>, and this must
+# be preserved.
+#
+
+INIT="init.sh"
+
+if [ ! -f "$INIT" ]; then
+    echo "  - init.sh not found in linbofs, skipping"
+    exit 0
+fi
+
+# Already patched?
+if grep -q "server=\[0-9\].*proc/cmdline" "$INIT"; then
+    echo "  - init.sh already patched (cmdline server= preserved), skipping"
+    exit 0
+fi
+
+# Check that the unpatched pattern exists
+if ! grep -q 'export LINBOSERVER=.*{SERVERID}' "$INIT"; then
+    echo "  - init.sh patch target not found (SERVERID override missing), skipping"
+    exit 0
+fi
+
+echo "  - Patching init.sh: preserve kernel cmdline server= parameter..."
+
+# Insert guard BEFORE the echo line, and closing fi AFTER the export line
+# Uses sed with pattern matching (no line numbers — works across init.sh versions)
+
+# Step 1: Insert if-guard before the echo LINBOSERVER line
+sed -i '/echo "export LINBOSERVER=.*SERVERID.*>> \/\.env/{
+  i\    # Only override if server= was not on kernel cmdline (Docker/remote LINBO)\
+    if ! grep -q '"'"'server=[0-9]'"'"' /proc/cmdline; then
+  s/^    /      /
+}' "$INIT"
+
+# Step 2: Indent and close fi after the export LINBOSERVER line
+sed -i '/^    export LINBOSERVER=.*{SERVERID}/{
+  s/^    /      /
+  a\    fi
+}' "$INIT"
+
+# Verify
+if grep -q "server=\[0-9\].*proc/cmdline" "$INIT"; then
+    echo "  - init.sh patched successfully"
+else
+    echo "  - WARNING: init.sh patch verification FAILED"
+    exit 1
+fi

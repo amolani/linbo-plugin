@@ -1,0 +1,13 @@
+Package: linbo-docker-dc-worker
+Version: __VERSION__
+Architecture: all
+Depends: python3, python3-redis, python3-requests
+Recommends: redis-tools
+Section: admin
+Priority: optional
+Maintainer: LINBO Docker <noreply@linbo-docker.local>
+Description: LINBO Docker DC Worker
+ Bridges LINBO Docker with linuxmuster.net AD DC.
+ Phase 8: Machine account repair via sam.ldb
+ Phase 11: Host provisioning via linuxmuster-import-devices
+ DHCP: Post-import hook for next-server redirect

@@ -1,0 +1,85 @@
+[LINBO]
+Cache = /dev/sda6
+Server = 10.0.10.1
+Group = dual_boot
+RootTimeout = 600
+AutoPartition = no
+AutoFormat = no
+AutoInitCache = no
+DownloadType = torrent
+GuiDisabled = no
+UseMinimalLayout = no
+Locale = de-de
+SystemType = efi64
+KernelOptions = server=10.0.10.1
+BootTimeout = 10
+
+[Partition]
+Dev = /dev/sda1
+Label = efi
+Size = 512M
+Id = ef00
+FSType = vfat
+Bootable = yes
+
+[Partition]
+Dev = /dev/sda2
+Label = msr
+Size = 128M
+Id = 0c01
+FSType =
+Bootable = no
+
+[Partition]
+Dev = /dev/sda3
+Label = windows
+Size = 80G
+Id = 0700
+FSType = ntfs
+Bootable = no
+
+[Partition]
+Dev = /dev/sda4
+Label = ubuntu
+Size = 50G
+Id = 8300
+FSType = ext4
+Bootable = no
+
+[Partition]
+Dev = /dev/sda5
+Label = swap
+Size = 4G
+Id = 8200
+FSType = swap
+Bootable = no
+
+[OS]
+Name = Windows 11
+Description = Windows 11 Education
+Version = 23H2
+IconName = win11.png
+BaseImage = win11_edu.qcow2
+Boot = /dev/sda3
+StartEnabled = yes
+SyncEnabled = yes
+NewEnabled = yes
+DefaultAction = sync
+AutostartTimeout = 5
+
+[OS]
+Name = Ubuntu 22.04
+Description = Ubuntu Desktop
+Version = 22.04
+IconName = ubuntu.svg
+BaseImage = ubuntu2204.qcow2
+Boot = /dev/sda4
+Root = /dev/sda4
+Kernel = /boot/vmlinuz
+Initrd = /boot/initrd.img
+Append = ro splash
+StartEnabled = yes
+SyncEnabled = yes
+NewEnabled = yes
+DefaultAction = sync
+Hidden = no

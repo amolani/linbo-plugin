@@ -1,0 +1,85 @@
+name: Build .deb Package
+
+on:
+  # Build on every tag push (v1.0.0, v1.1.0, etc.)
+  push:
+    tags:
+      - 'v*'
+
+  # Allow manual trigger
+  workflow_dispatch:
+    inputs:
+      release:
+        description: 'Create GitHub Release with .deb'
+        required: false
+        default: true
+        type: boolean
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write  # Needed for creating releases
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Extract version from changelog
+        id: version
+        run: |
+          VERSION=$(head -1 debian/changelog | sed 's/.*(\(.*\)).*/\1/')
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Building linbo-docker $VERSION"
+
+      - name: Build .deb package
+        run: |
+          chmod +x buildpackage.sh
+          ./buildpackage.sh
+
+      - name: Verify package
+        run: |
+          dpkg-deb --info linbo-docker_${{ steps.version.outputs.version }}_all.deb
+          echo ""
+          echo "=== Package contents (top-level) ==="
+          dpkg-deb --contents linbo-docker_${{ steps.version.outputs.version }}_all.deb | grep "opt/linbo-docker/[^/]*$"
+          echo ""
+          echo "=== CLI ==="
+          dpkg-deb --contents linbo-docker_${{ steps.version.outputs.version }}_all.deb | grep "usr/bin"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: linbo-docker-deb
+          path: linbo-docker_${{ steps.version.outputs.version }}_all.deb
+          retention-days: 30
+
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.release)
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name || format('v{0}', steps.version.outputs.version) }}
+          name: LINBO Docker ${{ steps.version.outputs.version }}
+          body: |
+            ## LINBO Docker ${{ steps.version.outputs.version }}
+
+            Modern Caching Server for linuxmuster.net 7.3
+
+            ### Installation
+            ```bash
+            wget https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/linbo-docker_${{ steps.version.outputs.version }}_all.deb
+            dpkg -i linbo-docker_${{ steps.version.outputs.version }}_all.deb
+            apt-get -f install -y
+
+            linbo-docker setup -i <LMN-SERVER-IP>
+            linbo-docker up
+            ```
+
+            ### Requirements
+            - Ubuntu 22.04 / 24.04
+            - Docker CE + Docker Compose Plugin
+            - linuxmuster.net 7.3 Server with Authority API
+          files: |
+            linbo-docker_${{ steps.version.outputs.version }}_all.deb
+          draft: false
+          prerelease: false

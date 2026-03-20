@@ -1,0 +1,16 @@
+[Unit]
+Description=LINBO Boot Scaffold Setup (oneshot)
+Documentation=https://github.com/linuxmuster/linbo-native
+After=network.target local-fs.target
+Before=linbo-api.service tftpd-hpa.service rsync.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/local/bin/setup-bootfiles.sh
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=linbo-setup
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,24 @@
+#!/bin/bash
+# Hook: Add timeout to ntpd call in init.sh
+# Without this, ntpd -q -p hangs forever if NTP server is unreachable.
+
+INIT="init.sh"
+if [ ! -f "$INIT" ]; then
+    echo "  - init.sh not found, skipping NTP timeout patch"
+    exit 0
+fi
+
+# Check if already patched
+if grep -q 'timeout.*ntpd' "$INIT"; then
+    echo "  - init.sh: NTP timeout already patched, skipping"
+    exit 0
+fi
+
+# Replace ntpd line with timeout version
+# Use sed with @ delimiter to avoid conflicts with | in "|| true"
+if grep -q 'ntpd -q -p' "$INIT"; then
+    sed -i 's@ntpd -q -p "\$NTPSRV"@timeout 10 ntpd -q -p "\$NTPSRV" 2>/dev/null; true@' "$INIT"
+    echo "  - init.sh patched: ntpd timeout 10s"
+else
+    echo "  - init.sh: ntpd line not found"
+fi

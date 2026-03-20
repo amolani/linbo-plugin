@@ -1,0 +1,27 @@
+#!/bin/bash
+#
+# Pre-repack hook: Inject edulution Plymouth splash theme
+# CWD is the extracted linbofs root directory
+#
+# The hook data directory is at the same level as this script.
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+THEME_SRC="$SCRIPT_DIR/data/plymouth-theme"
+THEME_DST="usr/share/plymouth/themes/linbo-splash"
+
+if [ ! -d "$THEME_SRC" ]; then
+    echo "  - edulution theme source not found ($THEME_SRC), skipping"
+    exit 0
+fi
+
+if [ ! -d "$THEME_DST" ]; then
+    echo "  - Plymouth theme dir not found in linbofs, skipping"
+    exit 0
+fi
+
+echo "  - Injecting edulution Plymouth theme..."
+cp "$THEME_SRC/linbo-splash.script" "$THEME_DST/linbo-splash.script"
+cp "$THEME_SRC/logo_no_arrows.png" "$THEME_DST/logo_no_arrows.png"
+# Remove arrow images (edulution theme uses no spinner)
+rm -f "$THEME_DST"/arrows-*.png
+echo "  - edulution theme injected (logo + script, arrows removed)"

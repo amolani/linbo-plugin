@@ -1,0 +1,355 @@
+#!/bin/bash
+#
+# LINBO Docker - DHCP Post-Import Hook
+#
+# Patches next-server directives into ISC DHCP device configs so that
+# PXE clients managed by LINBO Docker boot from the Docker TFTP server
+# instead of the production linuxmuster.net server.
+#
+# Called by linuxmuster-import-devices after device-import, before DHCP restart.
+# Receives: -s <school>
+#
+# Install path:
+#   /var/lib/linuxmuster/hooks/device-import.post.d/50-linbo-docker-dhcp
+#
+# Config:
+#   /etc/linbo-docker-dhcp.conf
+#
+
+set -uo pipefail
+
+# =============================================================================
+# Configuration
+# =============================================================================
+
+CONF_FILE="/etc/linbo-docker-dhcp.conf"
+
+# Defaults (overridden by config file)
+LINBO_DOCKER_IP=""
+SCHOOL=""
+DELTA_CSV=""
+DEVICES_DHCP=""
+LOGFILE="/var/log/linuxmuster/linbo-docker-dhcp.log"
+
+# =============================================================================
+# Logging
+# =============================================================================
+
+log() {
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] [linbo-docker-dhcp] $*" | tee -a "$LOGFILE"
+}
+
+# =============================================================================
+# Parse arguments (-s <school> from linuxmuster-import-devices)
+# =============================================================================
+
+while getopts "s:" opt; do
+    case $opt in
+        s) SCHOOL="$OPTARG" ;;
+        *) ;;
+    esac
+done
+shift $((OPTIND - 1))
+
+# =============================================================================
+# Load config
+# =============================================================================
+
+if [[ ! -f "$CONF_FILE" ]]; then
+    # No config = not configured, exit silently
+    exit 0
+fi
+
+# shellcheck source=/dev/null
+source "$CONF_FILE"
+
+# Apply {school} placeholder
+SCHOOL="${SCHOOL:-default-school}"
+DELTA_CSV="${DELTA_CSV/\{school\}/$SCHOOL}"
+DEVICES_DHCP="${DEVICES_DHCP/\{school\}/$SCHOOL}"
+
+# Ensure log directory exists
+mkdir -p "$(dirname "$LOGFILE")" 2>/dev/null || true
+
+# =============================================================================
+# Validate required settings
+# =============================================================================
+
+if [[ -z "$LINBO_DOCKER_IP" ]]; then
+    log "ERROR: LINBO_DOCKER_IP not set in $CONF_FILE"
+    exit 1
+fi
+
+if [[ -z "$DELTA_CSV" || -z "$DEVICES_DHCP" ]]; then
+    log "ERROR: DELTA_CSV or DEVICES_DHCP not set in $CONF_FILE"
+    exit 1
+fi
+
+if [[ ! -f "$DELTA_CSV" ]]; then
+    log "INFO: Delta CSV not found ($DELTA_CSV), nothing to do"
+    exit 0
+fi
+
+if [[ ! -f "$DEVICES_DHCP" ]]; then
+    log "INFO: DHCP devices file not found ($DEVICES_DHCP), nothing to do"
+    exit 0
+fi
+
+# =============================================================================
+# Build set of Docker-managed hostnames (pxeFlag >= 1)
+# =============================================================================
+
+declare -A DOCKER_HOSTS
+
+while IFS= read -r line; do
+    # Skip empty lines and comments
+    [[ -z "$line" || "$line" == \#* ]] && continue
+
+    # Split on semicolon
+    IFS=';' read -ra cols <<< "$line"
+
+    # Need at least hostname (col 1) and pxeFlag (col 10)
+    [[ ${#cols[@]} -lt 11 ]] && continue
+
+    local_hostname="${cols[1]}"
+    local_pxeflag="${cols[10]}"
+
+    # Header detection: skip if hostname field doesn't look like a valid hostname
+    if [[ ! "$local_hostname" =~ ^[a-zA-Z0-9][a-zA-Z0-9-]*$ ]]; then
+        continue
+    fi
+
+    # Only hosts with pxeFlag >= 1
+    if [[ "$local_pxeflag" =~ ^[0-9]+$ ]] && [[ "$local_pxeflag" -ge 1 ]]; then
+        DOCKER_HOSTS["${local_hostname,,}"]="$local_hostname"
+    fi
+done < "$DELTA_CSV"
+
+host_count=${#DOCKER_HOSTS[@]}
+
+if [[ $host_count -eq 0 ]]; then
+    log "INFO: No PXE-enabled hosts in delta CSV, nothing to do"
+    exit 0
+fi
+
+log "INFO: Found $host_count Docker-managed PXE host(s) in $DELTA_CSV"
+
+# =============================================================================
+# Check if dhcpd.conf includes the devices file (for syntax check later)
+# =============================================================================
+
+dhcp_included=false
+if grep -q "devices/${SCHOOL}.conf\|devices.conf" \
+    /etc/dhcp/dhcpd.conf /etc/dhcp/devices.conf 2>/dev/null; then
+    dhcp_included=true
+fi
+
+# =============================================================================
+# Patch DHCP config via AWK state machine
+# =============================================================================
+
+patched=0
+skipped=0
+errors=0
+
+# Create backup
+cp "$DEVICES_DHCP" "${DEVICES_DHCP}.bak"
+
+# AWK state machine:
+#   OUTSIDE -> IN_BLOCK (on "host <name> {") -> OUTSIDE (on "}")
+#   If host is in Docker set:
+#     - No next-server: insert after "hardware ethernet" line
+#     - next-server with wrong IP: replace
+#     - next-server with correct IP: skip
+#   Host NOT in Docker set: pass through unchanged
+
+awk_script='
+BEGIN {
+    state = "OUTSIDE"
+    patched = 0
+    skipped = 0
+    block_lines_count = 0
+}
+
+# Match "host <name> {" — use [{] to avoid regex brace issues
+/^[[:space:]]*host[[:space:]]+[^[:space:]]+[[:space:]]*[{]/ {
+    if (state == "OUTSIDE") {
+        state = "IN_BLOCK"
+        # Extract hostname: strip "host " prefix and trailing " {"
+        s = $0
+        sub(/^[[:space:]]*host[[:space:]]+/, "", s)
+        sub(/[[:space:]]*[{].*/, "", s)
+        current_host = tolower(s)
+        is_docker = (current_host in docker_hosts)
+        has_next_server = 0
+        next_server_correct = 0
+        hardware_line_num = -1
+        block_lines_count = 0
+        delete block_lines
+        block_lines[block_lines_count++] = $0
+        next
+    }
+}
+
+state == "IN_BLOCK" {
+    # Check for hardware ethernet line
+    if ($0 ~ /^[[:space:]]*hardware[[:space:]]+ethernet/) {
+        hardware_line_num = block_lines_count
+    }
+
+    # Check for existing next-server line
+    if ($0 ~ /^[[:space:]]*next-server/) {
+        has_next_server = 1
+        if (index($0, target_ip) > 0) {
+            next_server_correct = 1
+        }
+        if (is_docker) {
+            if (next_server_correct) {
+                # Already correct, keep as-is
+                block_lines[block_lines_count++] = $0
+            } else {
+                # Wrong IP, replace — detect indentation
+                match($0, /^[[:space:]]*/)
+                indent = substr($0, 1, RLENGTH)
+                if (indent == "") indent = "  "
+                block_lines[block_lines_count++] = indent "next-server " target_ip ";"
+                printf "[PATCH] Replaced next-server for %s: %s\n", current_host, target_ip > "/dev/stderr"
+            }
+            next
+        }
+    }
+
+    # Check for closing brace
+    if ($0 ~ /^[[:space:]]*[}]/) {
+        if (is_docker && !has_next_server && hardware_line_num >= 0) {
+            # Insert next-server after hardware ethernet line
+            match(block_lines[hardware_line_num], /^[[:space:]]*/)
+            indent = substr(block_lines[hardware_line_num], 1, RLENGTH)
+            if (indent == "") indent = "  "
+
+            for (i = 0; i <= hardware_line_num; i++) {
+                print block_lines[i]
+            }
+            print indent "next-server " target_ip ";"
+            printf "[PATCH] Inserted next-server for %s: %s\n", current_host, target_ip > "/dev/stderr"
+            for (i = hardware_line_num + 1; i < block_lines_count; i++) {
+                print block_lines[i]
+            }
+            print $0
+            patched++
+            state = "OUTSIDE"
+            next
+        }
+
+        # Docker host with existing next-server
+        if (is_docker) {
+            if (next_server_correct) {
+                skipped++
+                printf "[SKIP] %s already has correct next-server\n", current_host > "/dev/stderr"
+            } else {
+                patched++
+            }
+        }
+
+        # Print all stored block lines + closing brace
+        for (i = 0; i < block_lines_count; i++) {
+            print block_lines[i]
+        }
+        print $0
+        state = "OUTSIDE"
+        next
+    }
+
+    # Store line in block
+    block_lines[block_lines_count++] = $0
+    next
+}
+
+# Outside any block: pass through
+state == "OUTSIDE" {
+    print
+}
+
+END {
+    printf "%d %d\n", patched, skipped > "/dev/stderr"
+}
+'
+
+# Build AWK docker_hosts initialization from bash associative array
+awk_hosts_init=""
+for h in "${!DOCKER_HOSTS[@]}"; do
+    awk_hosts_init="${awk_hosts_init}docker_hosts[\"${h}\"] = 1; "
+done
+
+# Combine host initialization into the AWK BEGIN block
+awk_full_script="BEGIN { ${awk_hosts_init} } ${awk_script}"
+
+# Run AWK with error capture
+awk_stderr_file=$(mktemp)
+awk -v target_ip="$LINBO_DOCKER_IP" \
+    "$awk_full_script" \
+    "$DEVICES_DHCP" > "${DEVICES_DHCP}.tmp" 2>"$awk_stderr_file"
+
+awk_exit=$?
+
+if [[ $awk_exit -ne 0 ]]; then
+    log "ERROR: AWK processing failed (exit $awk_exit)"
+    mv "${DEVICES_DHCP}.bak" "$DEVICES_DHCP"
+    rm -f "${DEVICES_DHCP}.tmp" "$awk_stderr_file"
+    exit 1
+fi
+
+# Parse counters from last stderr line
+awk_stderr=$(cat "$awk_stderr_file")
+last_line=$(echo "$awk_stderr" | tail -1)
+patched=$(echo "$last_line" | awk '{print $1}')
+skipped=$(echo "$last_line" | awk '{print $2}')
+
+# Log per-host actions (all lines except the last counter line)
+while IFS= read -r stderr_line; do
+    [[ -z "$stderr_line" ]] && continue
+    # Skip the counter line
+    if [[ "$stderr_line" =~ ^[0-9]+[[:space:]]+[0-9]+$ ]]; then
+        continue
+    fi
+    log "$stderr_line"
+done < "$awk_stderr_file"
+
+rm -f "$awk_stderr_file"
+
+# Atomic replace
+mv "${DEVICES_DHCP}.tmp" "$DEVICES_DHCP"
+
+# =============================================================================
+# Syntax check (only if dhcpd.conf includes this file)
+# =============================================================================
+
+if [[ "$dhcp_included" == "true" ]] && command -v dhcpd &>/dev/null; then
+    dhcpd_output=$(dhcpd -t -cf /etc/dhcp/dhcpd.conf 2>&1)
+    dhcpd_rc=$?
+    if [[ -n "$dhcpd_output" ]]; then
+        echo "$dhcpd_output" >> "$LOGFILE"
+    fi
+    if [[ $dhcpd_rc -ne 0 ]]; then
+        log "ERROR: dhcpd -t failed (exit $dhcpd_rc) — rolling back to backup"
+        mv "${DEVICES_DHCP}.bak" "$DEVICES_DHCP"
+        exit 1
+    fi
+    log "INFO: dhcpd -t syntax check passed"
+else
+    if [[ "$dhcp_included" != "true" ]]; then
+        log "WARN: devices file not included in dhcpd.conf, skipping dhcpd -t"
+    fi
+fi
+
+# Clean up backup on success
+rm -f "${DEVICES_DHCP}.bak"
+
+# =============================================================================
+# Summary
+# =============================================================================
+
+total=$((patched + skipped))
+log "Done: $patched patched, $skipped skipped, $errors errors ($total total)"
+
+exit 0

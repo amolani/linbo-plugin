@@ -1,0 +1,8 @@
+containers/* /opt/linbo-docker/containers/
+config/* /opt/linbo-docker/config/
+scripts/* /opt/linbo-docker/scripts/
+themes/* /opt/linbo-docker/themes/
+docker-compose.yml /opt/linbo-docker/
+Makefile /opt/linbo-docker/
+.env.example /opt/linbo-docker/
+usr/bin/linbo-docker /usr/bin/

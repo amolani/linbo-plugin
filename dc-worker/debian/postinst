@@ -1,0 +1,27 @@
+#!/bin/bash
+set -e
+
+case "$1" in
+  configure)
+    # Create required directories
+    mkdir -p /var/log/macct
+    mkdir -p /var/log/linuxmuster
+    mkdir -p /var/lib/linuxmuster/hooks/device-import.post.d
+
+    # Reload systemd to pick up new service file
+    systemctl daemon-reload
+
+    echo ""
+    echo "linbo-docker-dc-worker installed."
+    echo ""
+    echo "Next steps:"
+    echo "  1. Run 'linbo-docker-configure <LINBO_DOCKER_IP>' to configure"
+    echo "  2. Or copy example configs manually:"
+    echo "     cp /etc/macct-worker.conf.example /etc/macct-worker.conf"
+    echo "     cp /etc/linbo-docker-dhcp.conf.example /etc/linbo-docker-dhcp.conf"
+    echo "  3. Start the service: systemctl start macct-worker"
+    echo ""
+    ;;
+esac
+
+exit 0

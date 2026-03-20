@@ -1,0 +1,234 @@
+# yaml-language-server: $schema=https://promptfoo.dev/config-schema.json
+description: 'LINBO Docker - Agent & Prompt Evaluation'
+
+# API-Keys via .env oder Umgebungsvariablen
+# env:
+#   ANTHROPIC_API_KEY: sk-ant-...
+
+providers:
+  - id: anthropic:messages:claude-opus-4-6
+    label: Opus 4.6
+    config:
+      max_tokens: 4096
+      temperature: 0
+
+  - id: anthropic:messages:claude-sonnet-4-6
+    label: Sonnet 4.6
+    config:
+      max_tokens: 4096
+      temperature: 0
+
+  - id: anthropic:messages:claude-haiku-4-5
+    label: Haiku 4.5
+    config:
+      max_tokens: 4096
+      temperature: 0
+
+# Globale Assertions fuer alle Tests
+defaultTest:
+  assert:
+    # Antwort muss substanziell sein (min. 200 Zeichen)
+    - type: javascript
+      value: 'output.length >= 200'
+    # Darf NICHT Alpine empfehlen (kritischer Projektfehler)
+    - type: not-icontains
+      value: 'alpine'
+      metric: no-alpine
+
+prompts:
+  - file://prompts/boot-spezialist.txt
+  - file://prompts/backend-entwickler.txt
+  - file://prompts/erklaerung.txt
+
+tests:
+  # ============================================================
+  # Boot-Spezialist: Diagnose
+  # ============================================================
+  - description: 'Boot-Diagnose: Schwarzer Bildschirm nach GRUB'
+    vars:
+      task: >
+        Ein Client bootet bis GRUB erfolgreich, aber danach erscheint nur ein schwarzer
+        Bildschirm. Kein Login-Prompt, keine GUI. Der GRUB-Menueeintrag wird korrekt
+        angezeigt und der Kernel-Load scheint zu funktionieren.
+        Erstelle eine systematische Fehleranalyse mit konkreten Debug-Befehlen.
+    assert:
+      - type: icontains
+        value: 'linbofs64'
+      - type: icontains
+        value: 'init'
+      - type: icontains
+        value: 'kernel'
+      - type: llm-rubric
+        value: >
+          Die Antwort muss eine systematische Diagnose enthalten, die mindestens 3 moegliche
+          Ursachen fuer einen schwarzen Bildschirm nach GRUB nennt (z.B. falscher Kernel,
+          fehlende Module, linbofs64-Problem, Locale-Fehler, Qt-Crash). Sie muss konkrete
+          Debug-Befehle oder Log-Pfade enthalten.
+
+  # ============================================================
+  # Boot-Spezialist: Config-Generierung
+  # ============================================================
+  - description: 'GRUB-Config: hostcfg fuer Raum R204'
+    vars:
+      task: >
+        Erstelle eine GRUB host-spezifische Konfiguration (hostcfg) fuer den Raum R204.
+        Der Raum hat 25 PCs, Gruppe "focal", Server-IP 10.0.0.13, HTTP-Port 8080.
+        Die PCs sollen Ubuntu 22.04 "focal" synchronisieren und starten.
+    assert:
+      - type: icontains
+        value: 'menuentry'
+      - type: icontains
+        value: 'linbo64'
+      - type: icontains
+        value: 'linbofs64'
+      - type: javascript
+        value: 'output.includes("10.0.0.13") || output.includes("server")'
+      - type: llm-rubric
+        value: >
+          Die Antwort muss eine syntaktisch plausible GRUB-Konfiguration enthalten mit
+          menuentry-Bloecken, linux/initrd-Zeilen, und korrekter server-IP oder Variable.
+
+  # ============================================================
+  # Boot-Spezialist: Erklaerung Boot-Chain
+  # ============================================================
+  - description: 'Boot-Chain Erklaerung: PXE bis linbo_gui'
+    vars:
+      task: >
+        Erklaere die komplette Boot-Chain von PXE-ROM bis linbo_gui in einer
+        uebersichtlichen Schritt-fuer-Schritt-Darstellung. Nenne fuer jeden Schritt
+        das beteiligte Protokoll und die relevanten Dateien.
+    assert:
+      - type: icontains
+        value: 'DHCP'
+      - type: icontains
+        value: 'TFTP'
+      - type: icontains
+        value: 'GRUB'
+      - type: icontains
+        value: 'linbo_gui'
+      - type: llm-rubric
+        value: >
+          Die Erklaerung muss die vollstaendige Kette abdecken: PXE-ROM -> DHCP ->
+          TFTP (GRUB-Bootloader) -> GRUB-Config -> Kernel+Initramfs laden -> init.sh ->
+          linbo_gui. Jeder Schritt muss das Protokoll und beteiligte Dateien nennen.
+
+  # ============================================================
+  # Backend-Entwickler: API-Design
+  # ============================================================
+  - description: 'API-Design: Multicast-Image-Verteilung'
+    vars:
+      task: >
+        Entwirf einen neuen API-Endpunkt POST /api/v1/operations/multicast fuer
+        Multicast-Image-Verteilung. Der Endpunkt soll ein Image an alle Hosts eines
+        Raums gleichzeitig verteilen. Definiere Request-Schema (Zod), Response-Format,
+        Error-Cases und WebSocket-Events fuer den Fortschritt.
+    assert:
+      - type: icontains
+        value: 'zod'
+      - type: icontains
+        value: 'websocket'
+      - type: javascript
+        value: 'output.includes("z.object") || output.includes("z.string") || output.includes("schema")'
+      - type: llm-rubric
+        value: >
+          Die Antwort muss ein vollstaendiges API-Design enthalten: Zod-Schema fuer
+          Request-Validierung, Response-Format mit data/error-Struktur, mindestens 2
+          Error-Cases, und WebSocket-Events fuer Progress-Updates.
+
+  # ============================================================
+  # Backend-Entwickler: Bug-Analyse
+  # ============================================================
+  - description: 'Bug-Analyse: Redis-Verbindungsverlust nach 24h'
+    vars:
+      task: >
+        Die Redis-Verbindung (ioredis 5.3) geht nach ca. 24 Stunden verloren.
+        Die API wirft dann ECONNREFUSED-Fehler. Ein Neustart des API-Containers
+        behebt das Problem temporaer. Redis selbst laeuft stabil (docker logs zeigen
+        keine Fehler). Analysiere moegliche Ursachen und schlage eine Loesung vor.
+    assert:
+      - type: icontains
+        value: 'redis'
+      - type: javascript
+        value: 'output.includes("reconnect") || output.includes("keepalive") || output.includes("timeout") || output.includes("maxRetriesPerRequest")'
+      - type: llm-rubric
+        value: >
+          Die Analyse muss mindestens 2 konkrete Ursachen nennen (z.B. TCP keepalive,
+          connection pooling, maxRetriesPerRequest, lazyConnect). Die Loesung muss
+          ioredis-spezifische Konfigurationsoptionen enthalten.
+
+  # ============================================================
+  # Backend-Entwickler: Code-Review
+  # ============================================================
+  - description: 'Code-Review: Sync-Mode Architektur'
+    vars:
+      task: >
+        Reviewe folgendes Pattern aus dem Sync-Modus:
+        ```javascript
+        // routes/index.js
+        if (!syncEnabled) {
+          router.use('/hosts', hostsRouter);
+          router.use('/rooms', roomsRouter);
+        }
+        // sync.service.js
+        async function getHosts() {
+          const cached = await redis.get('sync:hosts');
+          if (cached) return JSON.parse(cached);
+          const hosts = await lmnApi.getHosts();
+          await redis.setex('sync:hosts', 300, JSON.stringify(hosts));
+          return hosts;
+        }
+        ```
+        Bewerte: Architektur-Pattern, Error-Handling, Cache-Strategie, moegliche Race Conditions.
+    assert:
+      - type: icontains
+        value: 'cache'
+      - type: javascript
+        value: 'output.includes("race condition") || output.includes("Race") || output.includes("thundering herd") || output.includes("stampede") || output.includes("Stampede")'
+      - type: llm-rubric
+        value: >
+          Das Review muss mindestens auf Cache-Invalidierung, potenzielle Race Conditions
+          (thundering herd / cache stampede), und Error-Handling beim JSON.parse eingehen.
+
+  # ============================================================
+  # Erklaerung: Sync-Mode fuer Admins
+  # ============================================================
+  - description: 'Doku: Sync-Mode fuer neue Admins'
+    vars:
+      task: >
+        Erklaere einem neuen Schuladministrator, wie der LINBO Docker Sync-Mode funktioniert.
+        Der Admin kennt Linux-Grundlagen, aber kein Docker und keine APIs.
+        Erklaere: Was ist Sync-Mode, warum read-only, wie kommen die Daten rein,
+        was passiert bei einem Sync.
+    assert:
+      - type: icontains
+        value: 'read-only'
+      - type: javascript
+        value: 'output.includes("Authority API") || output.includes("linuxmuster") || output.includes("LMN")'
+      - type: llm-rubric
+        value: >
+          Die Erklaerung muss fuer einen Linux-Admin ohne Docker-Wissen verstaendlich sein.
+          Sie muss erklaeren: (1) Sync-Mode = read-only, (2) Datenquelle = linuxmuster.net
+          Authority API, (3) Docker veraendert keine Daten auf dem LMN-Server.
+          Keine unerklärten Fachbegriffe.
+
+  # ============================================================
+  # Erklaerung: Host-Kernel vs Package-Kernel
+  # ============================================================
+  - description: 'Doku: Host-Kernel vs Package-Kernel'
+    vars:
+      task: >
+        Was ist der Unterschied zwischen Host-Kernel und Package-Kernel (linbo7) im
+        LINBO Docker Kontext? Warum nutzt Docker den Host-Kernel? Was passiert, wenn
+        versehentlich der Package-Kernel verwendet wird?
+    assert:
+      - type: icontains
+        value: 'module'
+      - type: javascript
+        value: '(output.includes("6000") || output.includes("6.000")) && (output.includes("720") || output.includes("4.5"))'
+        metric: kernel-facts
+      - type: llm-rubric
+        value: >
+          Die Erklaerung muss enthalten: (1) Host-Kernel = gross (~15MB, ~6000 Module,
+          volle Hardware-Kompatibilitaet), (2) Package-Kernel = klein (~4.5MB, ~720 Module,
+          minimale Treiber), (3) Konsequenz bei falschem Kernel: Clients verlieren Netzwerk
+          nach GRUB weil Netzwerk-Treiber fehlen.

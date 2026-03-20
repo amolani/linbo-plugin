@@ -1,0 +1,11 @@
+#!/bin/bash
+set -e
+
+case "$1" in
+  remove|upgrade)
+    systemctl stop macct-worker 2>/dev/null || true
+    systemctl disable macct-worker 2>/dev/null || true
+    ;;
+esac
+
+exit 0

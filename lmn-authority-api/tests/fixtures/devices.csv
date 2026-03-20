@@ -1,0 +1,11 @@
+# room;hostname;config;mac;ip;ms_office_key;ms_windows_key;unused;sophomorix_role;unused_2;pxe_flag;option;field_13;field_14;sophomorix_comment
+#### SERVERS
+server;server;nopxe;4F:55:FF:69:15:CC;10.0.0.11;;;;addc;;0;;;;;
+server;firewall;nopxe;BC:24:11:02:96:D1;10.0.0.254;;;;server;;0;;;;;
+
+#### PCS
+sgm;sgm-pc02;bios_sata;BC:24:11:63:8E:40;10.0.0.102;;;;classroom-studentcomputer;;1;;;;;
+amo;amo-pc02;win11_efi_sata;BC:24:11:2A:E9:8C;10.0.0.111;;;;classroom-studentcomputer;;1;;;;;
+amo;amo-pc04;win11_efi_nvme;C4:C6:E6:D9:7B:95;10.0.0.113;;;;classroom-studentcomputer;;1;;;;;
+fgy;fgy-pc01;bios_sata;00:21:CC:67:58:8F;10.0.0.200;;;;classroom-studentcomputer;;1;;;;;
+amo;amo-pc09;ubuntu-efi;BC:24:11:D0:A1:33;10.0.0.122;;;;classroom-studentcomputer;;1;;;;;

@@ -1,0 +1,20 @@
+# Malformed devices.csv for testing
+# Mix of valid, invalid-mac, too-few-columns, and invalid-ip rows
+
+# Valid row
+sgm;sgm-pc01;bios_sata;AA:BB:CC:DD:EE:FF;10.0.0.50;;;;classroom-studentcomputer;;1;;;;;
+
+# Too few columns (only 3 fields)
+badroom;badhost;badconfig
+
+# Invalid MAC address (ZZZZ)
+lab;lab-pc01;bios_sata;ZZ:ZZ:ZZ:ZZ:ZZ:ZZ;10.0.0.60;;;;classroom-studentcomputer;;1;;;;;
+
+# Invalid IP address
+lab;lab-pc02;bios_sata;11:22:33:44:55:66;999.999.999.999;;;;classroom-studentcomputer;;1;;;;;
+
+# 4 columns (still <5, should be skipped)
+a;b;c;d
+
+# Another valid row
+amo;amo-pc10;win11_efi_sata;DE:AD:BE:EF:00:01;10.0.0.170;;;;classroom-studentcomputer;;1;;;;;

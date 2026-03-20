@@ -1,0 +1,9 @@
+Add the following 2 lines to linuxmusterApi/main.py:
+
+1. Import (add next to the other router imports):
+
+   from routers_v1 import linbo
+
+2. Register (add next to the other app.include_router calls):
+
+   app.include_router(linbo.router, prefix="/v1")

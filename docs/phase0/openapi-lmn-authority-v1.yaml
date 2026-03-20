@@ -1,0 +1,1477 @@
+openapi: 3.1.0
+info:
+  title: LMN Authority API
+  version: 1.0.0
+  summary: linuxmuster.net LINBO Host & Config Authority API
+  description: |
+    The LMN Authority API runs on the linuxmuster.net server (10.0.0.11) and
+    serves as the **single source of truth** for LINBO host registrations,
+    start.conf configurations, and DHCP reservations.
+
+    **LINBO Docker consumes this API read-only.** Docker never writes host,
+    config, or room data back to the LMN server. All CRUD for these entities
+    happens on the LMN side (webui7 / linuxmuster-import-devices).
+
+    The LINBO Runtime Docker stack polls this API via a cursor-based delta feed,
+    fetches changed records in batches, and builds local snapshots that are
+    served to PXE clients over TFTP / HTTP / rsync.
+
+    ## Authentication
+    Every request requires a **Bearer token** in the `Authorization` header.
+    Additionally, the caller's IP address must be in the server's allowlist
+    (typically `10.0.0.0/16`).
+
+    ## Cursor Format
+    The delta-feed cursor is an opaque string with the format
+    `"<unix-timestamp>:<sequence>"`, e.g. `"1708943200:42"`.
+    Cursors are monotonically increasing and safe to compare lexicographically.
+    An empty or missing cursor triggers a full-snapshot response (all IDs).
+
+    ## Rate Limits
+    The API enforces a per-token rate limit of **60 requests / minute**.
+    Batch endpoints count as a single request regardless of payload size.
+  contact:
+    name: LINBO Docker Maintainers
+  license:
+    name: AGPL-3.0-or-later
+    identifier: AGPL-3.0-or-later
+
+servers:
+  - url: https://10.0.0.11
+    description: Production linuxmuster.net server
+  - url: http://10.0.0.11
+    description: Development (HTTP, internal only)
+
+tags:
+  - name: health
+    description: Health & readiness probes
+  - name: delta
+    description: Cursor-based change feed
+  - name: hosts
+    description: Host record lookups
+  - name: startconfs
+    description: start.conf content lookups
+  - name: configs
+    description: Parsed config record lookups
+  - name: dhcp
+    description: DHCP export and reservation endpoints
+  - name: webhooks
+    description: Webhook registration (future phase)
+
+# ---------------------------------------------------------------------------
+# Security
+# ---------------------------------------------------------------------------
+security:
+  - bearerAuth: []
+
+# ---------------------------------------------------------------------------
+# Paths
+# ---------------------------------------------------------------------------
+paths:
+  # =========================================================================
+  # Health & Status
+  # =========================================================================
+  /health:
+    get:
+      operationId: getHealth
+      tags: [health]
+      summary: Health check
+      description: |
+        Returns service health, version, uptime, and the timestamp of the last
+        data change. Does **not** require authentication.
+      security: []
+      responses:
+        "200":
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+              example:
+                status: ok
+                version: "1.0.0"
+                uptime: 86432
+                lastChange: "2026-02-26T08:14:00Z"
+
+  /ready:
+    get:
+      operationId: getReady
+      tags: [health]
+      summary: Readiness probe
+      description: |
+        Returns `ready: true` when the database and all dependencies are
+        available. Used by Docker / Kubernetes probes. Does **not** require
+        authentication.
+      security: []
+      responses:
+        "200":
+          description: Service is ready
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ready]
+                properties:
+                  ready:
+                    type: boolean
+              example:
+                ready: true
+        "503":
+          description: Service is not ready
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ready]
+                properties:
+                  ready:
+                    type: boolean
+                  reason:
+                    type: string
+              example:
+                ready: false
+                reason: "database connection timeout"
+
+  # =========================================================================
+  # Delta Feed
+  # =========================================================================
+  /api/v1/linbo/changes:
+    get:
+      operationId: getChanges
+      tags: [delta]
+      summary: Cursor-based delta feed
+      description: |
+        Returns a list of entity IDs that changed since the provided cursor.
+        The LINBO Runtime Docker calls this endpoint on a polling interval
+        (e.g. every 30 s) to discover what needs to be re-fetched.
+
+        **Initial sync:** Pass an empty string `""` for `since` to receive a
+        full snapshot containing all host MACs, all start.conf IDs, and all
+        config IDs. The response includes `nextCursor` which must be stored
+        and sent in subsequent requests.
+
+        **Incremental sync:** Pass the last `nextCursor` value. The response
+        contains only the entities that changed since that cursor.
+
+        Changes are **rare** (a few times per day for ~2000 hosts / ~20
+        configs), so most incremental responses will be empty.
+      parameters:
+        - name: since
+          in: query
+          required: true
+          description: |
+            Cursor from a previous response. Pass an empty string `""` for
+            the initial full-snapshot request (returns all IDs).
+            Must always be provided (required).
+          schema:
+            type: string
+          examples:
+            initial:
+              summary: Initial sync (empty cursor)
+              value: ""
+            incremental:
+              summary: Incremental sync
+              value: "1708943200:42"
+      responses:
+        "200":
+          description: Change set since the given cursor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeltaResponse"
+              examples:
+                empty:
+                  summary: No changes since last poll
+                  value:
+                    nextCursor: "1708943200:42"
+                    hostsChanged: []
+                    startConfsChanged: []
+                    configsChanged: []
+                    dhcpChanged: false
+                    deletedHosts: []
+                    deletedStartConfs: []
+                incremental:
+                  summary: A host MAC changed, DHCP stale
+                  value:
+                    nextCursor: "1708943260:43"
+                    hostsChanged:
+                      - "AA:BB:CC:DD:EE:01"
+                      - "AA:BB:CC:DD:EE:02"
+                    startConfsChanged:
+                      - "win11_efi_sata"
+                    configsChanged: []
+                    dhcpChanged: true
+                    deletedHosts: []
+                    deletedStartConfs: []
+                fullSnapshot:
+                  summary: Full snapshot (empty cursor)
+                  value:
+                    nextCursor: "1708943200:42"
+                    hostsChanged:
+                      - "AA:BB:CC:DD:EE:01"
+                      - "AA:BB:CC:DD:EE:02"
+                      - "AA:BB:CC:DD:EE:03"
+                      - "11:22:33:44:55:66"
+                    startConfsChanged:
+                      - "win11_efi_sata"
+                      - "ubuntu_efi_nvme"
+                      - "mint_efi_sata"
+                    configsChanged:
+                      - "win11_efi_sata"
+                      - "ubuntu_efi_nvme"
+                      - "mint_efi_sata"
+                    dhcpChanged: true
+                    deletedHosts: []
+                    deletedStartConfs: []
+        "400":
+          description: Invalid cursor format
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                error: "INVALID_CURSOR"
+                message: "Cursor must be in format 'timestamp:sequence' or empty for full snapshot"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+
+  # =========================================================================
+  # Batch Fetch — Hosts
+  # =========================================================================
+  /api/v1/linbo/hosts:batch:
+    post:
+      operationId: batchGetHosts
+      tags: [hosts]
+      summary: Batch fetch host records by MAC address
+      description: |
+        Fetch up to **500** host records in a single request. Used by the LINBO
+        Runtime Docker after the delta feed reports changed MACs.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [macs]
+              properties:
+                macs:
+                  type: array
+                  items:
+                    type: string
+                    pattern: "^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$"
+                  minItems: 1
+                  maxItems: 500
+                  description: List of MAC addresses (upper-case colon-separated)
+            example:
+              macs:
+                - "AA:BB:CC:DD:EE:01"
+                - "AA:BB:CC:DD:EE:02"
+      responses:
+        "200":
+          description: Host records matching the requested MACs
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [hosts]
+                properties:
+                  hosts:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/HostRecord"
+              example:
+                hosts:
+                  - mac: "AA:BB:CC:DD:EE:01"
+                    hostname: "r100-pc01"
+                    ip: "10.0.100.1"
+                    room: "r100"
+                    school: "default-school"
+                    hostgroup: "win11_efi_sata"
+                    pxeEnabled: true
+                    pxeFlag: 1
+                    dhcpOptions: ""
+                    startConfId: "win11_efi_sata"
+                    policies:
+                      bootDefault: "sync"
+                      timeout: 5
+                      hiddenMenu: false
+                    updatedAt: "2026-02-26T08:10:00Z"
+                  - mac: "AA:BB:CC:DD:EE:02"
+                    hostname: "r100-pc02"
+                    ip: "10.0.100.2"
+                    room: "r100"
+                    school: "default-school"
+                    hostgroup: "win11_efi_sata"
+                    pxeEnabled: true
+                    pxeFlag: 1
+                    dhcpOptions: ""
+                    startConfId: "win11_efi_sata"
+                    policies:
+                      bootDefault: "sync"
+                      timeout: 5
+                      hiddenMenu: false
+                    updatedAt: "2026-02-26T08:10:00Z"
+        "400":
+          description: Validation error (empty array, too many MACs, invalid format)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                error: "VALIDATION_ERROR"
+                message: "macs array must contain between 1 and 500 entries"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+
+  # =========================================================================
+  # Batch Fetch — StartConfs
+  # =========================================================================
+  /api/v1/linbo/startconfs:batch:
+    post:
+      operationId: batchGetStartConfs
+      tags: [startconfs]
+      summary: Batch fetch start.conf content by ID
+      description: |
+        Fetch the raw start.conf text for one or more config IDs. The content
+        is the complete file as deployed to `/srv/linbo/start.conf.<id>`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [ids]
+              properties:
+                ids:
+                  type: array
+                  items:
+                    type: string
+                    pattern: "^[a-zA-Z0-9_-]+$"
+                  minItems: 1
+                  maxItems: 100
+            example:
+              ids:
+                - "win11_efi_sata"
+                - "ubuntu_efi_nvme"
+      responses:
+        "200":
+          description: start.conf records matching the requested IDs
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [startConfs]
+                properties:
+                  startConfs:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/StartConfRecord"
+              example:
+                startConfs:
+                  - id: "win11_efi_sata"
+                    content: |
+                      [LINBO]
+                      Server = 10.0.0.1
+                      Group = win11_efi_sata
+                      Cache = /dev/sda4
+                      SystemType = efi64
+                      KernelOptions = quiet splash
+
+                      [Partition]
+                      Dev = /dev/sda1
+                      Label = efi
+                      Size = 200M
+                      Id = ef
+                      FSType = vfat
+                      Bootable = yes
+
+                      [Partition]
+                      Dev = /dev/sda2
+                      Label = msr
+                      Size = 128M
+                      Id = 0c01
+                      FSType =
+                      Bootable = no
+
+                      [Partition]
+                      Dev = /dev/sda3
+                      Label = windows
+                      Size = 80G
+                      Id = 0700
+                      FSType = ntfs
+                      Bootable = no
+
+                      [Partition]
+                      Dev = /dev/sda4
+                      Label = cache
+                      Size =
+                      Id = 8300
+                      FSType = ext4
+                      Bootable = no
+
+                      [OS]
+                      Name = Windows 11
+                      Version = 24H2
+                      IconName = win10.svg
+                      BaseImage = win11.qcow2
+                      Boot = /dev/sda3
+                      Root = /dev/sda3
+                      Kernel = auto
+                      Initrd =
+                      Append =
+                      StartEnabled = yes
+                      SyncEnabled = yes
+                      NewEnabled = yes
+                      Autostart = no
+                      DefaultAction = sync
+                      Hidden = no
+                    hash: "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2"
+                    updatedAt: "2026-02-26T07:00:00Z"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+
+  # =========================================================================
+  # Batch Fetch — Configs (parsed)
+  # =========================================================================
+  /api/v1/linbo/configs:batch:
+    post:
+      operationId: batchGetConfigs
+      tags: [configs]
+      summary: Batch fetch parsed config records by ID
+      description: |
+        Fetch structured (parsed) config records. Unlike `startconfs:batch`
+        which returns the raw text, this returns the config decomposed into
+        OS entries, partitions, and GRUB policy objects.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [ids]
+              properties:
+                ids:
+                  type: array
+                  items:
+                    type: string
+                    pattern: "^[a-zA-Z0-9_-]+$"
+                  minItems: 1
+                  maxItems: 100
+            example:
+              ids:
+                - "win11_efi_sata"
+      responses:
+        "200":
+          description: Parsed config records matching the requested IDs
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [configs]
+                properties:
+                  configs:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/ConfigRecord"
+              example:
+                configs:
+                  - id: "win11_efi_sata"
+                    name: "Windows 11 EFI SATA"
+                    osEntries:
+                      - name: "Windows 11"
+                        version: "24H2"
+                        iconname: "win10.svg"
+                        baseimage: "win11.qcow2"
+                        boot: "/dev/sda3"
+                        root: "/dev/sda3"
+                        kernel: "auto"
+                        initrd: ""
+                        append: ""
+                        startEnabled: true
+                        syncEnabled: true
+                        newEnabled: true
+                    partitions:
+                      - device: "/dev/sda1"
+                        label: "efi"
+                        size: "200M"
+                        fsType: "vfat"
+                        bootable: true
+                      - device: "/dev/sda2"
+                        label: "msr"
+                        size: "128M"
+                        fsType: ""
+                        bootable: false
+                      - device: "/dev/sda3"
+                        label: "windows"
+                        size: "80G"
+                        fsType: "ntfs"
+                        bootable: false
+                      - device: "/dev/sda4"
+                        label: "cache"
+                        size: ""
+                        fsType: "ext4"
+                        bootable: false
+                    grubPolicy:
+                      timeout: 5
+                      defaultEntry: 0
+                      hiddenMenu: false
+                    updatedAt: "2026-02-26T07:00:00Z"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+
+  # =========================================================================
+  # Single Lookup — Host
+  # =========================================================================
+  /api/v1/linbo/host:
+    get:
+      operationId: getHost
+      tags: [hosts]
+      summary: Look up a single host by MAC address
+      description: |
+        Debug / admin endpoint. Not used in the boot-serving hot path.
+      parameters:
+        - name: mac
+          in: query
+          required: true
+          schema:
+            type: string
+            pattern: "^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$"
+          example: "AA:BB:CC:DD:EE:01"
+      responses:
+        "200":
+          description: Host found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HostRecord"
+              example:
+                mac: "AA:BB:CC:DD:EE:01"
+                hostname: "r100-pc01"
+                ip: "10.0.100.1"
+                room: "r100"
+                school: "default-school"
+                hostgroup: "win11_efi_sata"
+                pxeEnabled: true
+                pxeFlag: 1
+                dhcpOptions: ""
+                startConfId: "win11_efi_sata"
+                policies:
+                  bootDefault: "sync"
+                  timeout: 5
+                  hiddenMenu: false
+                updatedAt: "2026-02-26T08:10:00Z"
+        "400":
+          description: Invalid MAC format
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                error: "VALIDATION_ERROR"
+                message: "mac must be in format AA:BB:CC:DD:EE:FF"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          description: Host not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                error: "NOT_FOUND"
+                message: "No host found with MAC AA:BB:CC:DD:EE:99"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+
+  # =========================================================================
+  # Single Lookup — StartConf
+  # =========================================================================
+  /api/v1/linbo/startconf:
+    get:
+      operationId: getStartConf
+      tags: [startconfs]
+      summary: Look up a single start.conf by ID
+      description: |
+        Debug / admin endpoint. Not used in the boot-serving hot path.
+      parameters:
+        - name: id
+          in: query
+          required: true
+          schema:
+            type: string
+            pattern: "^[a-zA-Z0-9_-]+$"
+          example: "win11_efi_sata"
+      responses:
+        "200":
+          description: start.conf found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StartConfRecord"
+              example:
+                id: "win11_efi_sata"
+                content: "[LINBO]\nServer = 10.0.0.1\nGroup = win11_efi_sata\n..."
+                hash: "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2"
+                updatedAt: "2026-02-26T07:00:00Z"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          description: start.conf not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                error: "NOT_FOUND"
+                message: "No start.conf found with id 'nonexistent_config'"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+
+  # =========================================================================
+  # DHCP Export — dnsmasq proxy
+  # =========================================================================
+  /api/v1/linbo/dhcp/export/dnsmasq-proxy:
+    get:
+      operationId: exportDnsmasqProxy
+      tags: [dhcp]
+      summary: Export complete dnsmasq proxy-DHCP configuration
+      description: |
+        Returns a ready-to-use dnsmasq proxy-DHCP configuration file as plain
+        text. Includes PXE architecture detection, boot file assignments, and
+        per-host Option 40 (NIS domain) tags mapped to hostgroup names.
+
+        Supports conditional GET via `ETag` / `If-None-Match` and
+        `Last-Modified` / `If-Modified-Since` headers.
+      responses:
+        "200":
+          description: dnsmasq proxy config as plain text
+          headers:
+            ETag:
+              schema:
+                type: string
+              description: Hash of the configuration content
+              example: '"d4e5f6a1b2c3"'
+            Last-Modified:
+              schema:
+                type: string
+                format: date-time
+              description: Timestamp of last data change
+              example: "Wed, 26 Feb 2026 08:14:00 GMT"
+          content:
+            text/plain:
+              schema:
+                type: string
+              example: |
+                #
+                # LINBO Docker - dnsmasq Configuration (proxy mode)
+                # Generated: 2026-02-26T08:15:00Z
+                # Hosts: 120
+                #
+
+                # Proxy DHCP mode - no IP assignment, PXE only
+                port=0
+                dhcp-range=10.0.0.0,proxy
+                log-dhcp
+
+                interface=eth0
+                bind-interfaces
+
+                # PXE boot architecture detection
+                dhcp-match=set:bios,option:client-arch,0
+                dhcp-match=set:efi32,option:client-arch,6
+                dhcp-match=set:efi64,option:client-arch,7
+                dhcp-match=set:efi64,option:client-arch,9
+
+                dhcp-boot=tag:bios,boot/grub/i386-pc/core.0,10.0.0.1
+                dhcp-boot=tag:efi32,boot/grub/i386-efi/core.efi,10.0.0.1
+                dhcp-boot=tag:efi64,boot/grub/x86_64-efi/core.efi,10.0.0.1
+
+                # Host config assignments
+                dhcp-host=AA:BB:CC:DD:EE:01,set:win11_efi_sata
+                dhcp-host=AA:BB:CC:DD:EE:02,set:win11_efi_sata
+                dhcp-host=11:22:33:44:55:66,set:ubuntu_efi_nvme
+
+                # Config name via NIS-Domain (Option 40)
+                dhcp-option=tag:win11_efi_sata,40,win11_efi_sata
+                dhcp-option=tag:ubuntu_efi_nvme,40,ubuntu_efi_nvme
+        "304":
+          description: Not modified (ETag / Last-Modified match)
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+
+  # =========================================================================
+  # DHCP Export — ISC DHCP
+  # =========================================================================
+  /api/v1/linbo/dhcp/export/isc-dhcp:
+    get:
+      operationId: exportIscDhcp
+      tags: [dhcp]
+      summary: Export complete ISC DHCP configuration
+      description: |
+        Returns a ready-to-use ISC DHCP configuration file as plain text.
+        Includes subnet declaration, architecture-based PXE boot file
+        selection, and per-host entries with `option nis-domain` set to the
+        hostgroup name.
+
+        Supports conditional GET via `ETag` / `If-None-Match` and
+        `Last-Modified` / `If-Modified-Since` headers.
+      responses:
+        "200":
+          description: ISC DHCP config as plain text
+          headers:
+            ETag:
+              schema:
+                type: string
+              description: Hash of the configuration content
+              example: '"b2c3d4e5f6a1"'
+            Last-Modified:
+              schema:
+                type: string
+                format: date-time
+              description: Timestamp of last data change
+              example: "Wed, 26 Feb 2026 08:14:00 GMT"
+          content:
+            text/plain:
+              schema:
+                type: string
+              example: |
+                #
+                # LINBO Docker - ISC DHCP Configuration
+                # Generated: 2026-02-26T08:15:00Z
+                # Hosts: 120
+                #
+
+                # Architecture detection for PXE boot
+                option arch code 93 = unsigned integer 16;
+
+                # DHCP server settings
+                server-identifier 10.0.0.1;
+                server-name "10.0.0.1";
+
+                # LINBO TFTP boot settings
+                next-server 10.0.0.1;
+
+                if option arch = 00:06 {
+                  filename "boot/grub/i386-efi/core.efi";
+                } else if option arch = 00:07 {
+                  filename "boot/grub/x86_64-efi/core.efi";
+                } else if option arch = 00:09 {
+                  filename "boot/grub/x86_64-efi/core.efi";
+                } else {
+                  filename "boot/grub/i386-pc/core.0";
+                }
+
+                subnet 10.0.0.0 netmask 255.255.0.0 {
+                  option routers 10.0.0.254;
+                  option domain-name-servers 10.0.0.1;
+                  option domain-name "linuxmuster.lan";
+                  default-lease-time 86400;
+                  max-lease-time 172800;
+
+                  # Config: win11_efi_sata
+                  # Hosts: 2
+                  host r100-pc01 {
+                    hardware ethernet AA:BB:CC:DD:EE:01;
+                    fixed-address 10.0.100.1;
+                    option host-name "r100-pc01";
+                    next-server 10.0.0.1;
+                    option extensions-path "win11_efi_sata";
+                    option nis-domain "win11_efi_sata";
+                  }
+
+                  host r100-pc02 {
+                    hardware ethernet AA:BB:CC:DD:EE:02;
+                    fixed-address 10.0.100.2;
+                    option host-name "r100-pc02";
+                    next-server 10.0.0.1;
+                    option extensions-path "win11_efi_sata";
+                    option nis-domain "win11_efi_sata";
+                  }
+                }
+        "304":
+          description: Not modified (ETag / Last-Modified match)
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+
+  # =========================================================================
+  # DHCP Reservations — Batch
+  # =========================================================================
+  /api/v1/linbo/dhcp/reservations:batch:
+    post:
+      operationId: batchGetDhcpReservations
+      tags: [dhcp]
+      summary: Batch fetch DHCP reservations by MAC address
+      description: |
+        Returns structured DHCP reservation records for the requested MACs.
+        Each record includes the boot policy (architecture, boot file,
+        next-server) needed to construct per-host DHCP options.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [macs]
+              properties:
+                macs:
+                  type: array
+                  items:
+                    type: string
+                    pattern: "^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$"
+                  minItems: 1
+                  maxItems: 500
+            example:
+              macs:
+                - "AA:BB:CC:DD:EE:01"
+                - "11:22:33:44:55:66"
+      responses:
+        "200":
+          description: DHCP reservation records
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [reservations]
+                properties:
+                  reservations:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/DhcpReservation"
+              example:
+                reservations:
+                  - mac: "AA:BB:CC:DD:EE:01"
+                    hostname: "r100-pc01"
+                    ip: "10.0.100.1"
+                    pxeEnabled: true
+                    hostgroup: "win11_efi_sata"
+                    bootPolicy:
+                      arch: "efi64"
+                      bootfile: "boot/grub/x86_64-efi/core.efi"
+                      nextServer: "10.0.0.1"
+                  - mac: "11:22:33:44:55:66"
+                    hostname: "r200-nb01"
+                    ip: null
+                    pxeEnabled: true
+                    hostgroup: "ubuntu_efi_nvme"
+                    bootPolicy:
+                      arch: "efi64"
+                      bootfile: "boot/grub/x86_64-efi/core.efi"
+                      nextServer: "10.0.0.1"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+
+  # =========================================================================
+  # Webhooks (future phase)
+  # =========================================================================
+  /api/v1/linbo/webhooks:
+    post:
+      operationId: registerWebhook
+      tags: [webhooks]
+      summary: Register a webhook for change notifications
+      description: |
+        **Future phase.** Register a URL to receive POST callbacks when data
+        changes. The server will send a signed JSON payload to the registered
+        URL for each subscribed event type.
+
+        This is an alternative to polling the delta feed and will be
+        implemented in a later phase.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WebhookRegistration"
+            example:
+              url: "https://10.0.0.13:3000/api/v1/webhooks/lmn"
+              events:
+                - "hosts.changed"
+                - "startconfs.changed"
+                - "dhcp.changed"
+              secret: "whsec_a1b2c3d4e5f6..."
+      responses:
+        "201":
+          description: Webhook registered successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookResponse"
+              example:
+                id: "wh_01HQXK3M7N8P9R0S1T2U3V4W"
+                url: "https://10.0.0.13:3000/api/v1/webhooks/lmn"
+                events:
+                  - "hosts.changed"
+                  - "startconfs.changed"
+                  - "dhcp.changed"
+                createdAt: "2026-02-26T08:20:00Z"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                error: "VALIDATION_ERROR"
+                message: "url must be a valid HTTPS URL"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+
+# ---------------------------------------------------------------------------
+# Components
+# ---------------------------------------------------------------------------
+components:
+  # =========================================================================
+  # Security Schemes
+  # =========================================================================
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: opaque-token
+      description: |
+        Pre-shared API token configured on the linuxmuster.net server.
+        Additionally, the caller's IP must be in the server's allowlist
+        (default: `10.0.0.0/16`).
+
+  # =========================================================================
+  # Reusable Responses
+  # =========================================================================
+  responses:
+    Unauthorized:
+      description: Missing or invalid Bearer token
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          example:
+            error: "UNAUTHORIZED"
+            message: "Missing or invalid Authorization header"
+
+    Forbidden:
+      description: Caller IP not in allowlist
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          example:
+            error: "FORBIDDEN"
+            message: "Source IP 192.168.1.50 is not in the allowlist"
+
+    RateLimited:
+      description: Rate limit exceeded
+      headers:
+        Retry-After:
+          schema:
+            type: integer
+          description: Seconds until the rate limit resets
+          example: 30
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          example:
+            error: "RATE_LIMITED"
+            message: "Rate limit exceeded. Retry after 30 seconds."
+
+  # =========================================================================
+  # Schemas
+  # =========================================================================
+  schemas:
+    # -----------------------------------------------------------------------
+    # Health
+    # -----------------------------------------------------------------------
+    HealthResponse:
+      type: object
+      required: [status, version, uptime, lastChange]
+      properties:
+        status:
+          type: string
+          enum: [ok, degraded]
+          description: Overall service health
+        version:
+          type: string
+          description: API version string
+          examples: ["1.0.0"]
+        uptime:
+          type: integer
+          description: Process uptime in seconds
+          examples: [86432]
+        lastChange:
+          type: string
+          format: date-time
+          description: Timestamp of the most recent data modification
+          examples: ["2026-02-26T08:14:00Z"]
+
+    # -----------------------------------------------------------------------
+    # Delta Feed
+    # -----------------------------------------------------------------------
+    DeltaResponse:
+      type: object
+      required:
+        - nextCursor
+        - hostsChanged
+        - startConfsChanged
+        - configsChanged
+        - dhcpChanged
+        - deletedHosts
+        - deletedStartConfs
+      properties:
+        nextCursor:
+          type: string
+          description: |
+            Opaque cursor to pass as `since` in the next poll.
+            Format: `"<unix-timestamp>:<sequence>"`.
+          examples: ["1708943260:43"]
+        hostsChanged:
+          type: array
+          items:
+            type: string
+            pattern: "^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$"
+          description: MAC addresses of hosts that were created or updated
+        startConfsChanged:
+          type: array
+          items:
+            type: string
+          description: IDs of start.conf records that were created or updated
+        configsChanged:
+          type: array
+          items:
+            type: string
+          description: IDs of parsed config records that were created or updated
+        dhcpChanged:
+          type: boolean
+          description: |
+            `true` if any change affects DHCP exports (host IP, MAC, PXE flag,
+            or hostgroup changed). The consumer should re-fetch DHCP exports.
+        deletedHosts:
+          type: array
+          items:
+            type: string
+            pattern: "^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$"
+          description: MAC addresses of hosts that were deleted since the cursor
+        deletedStartConfs:
+          type: array
+          items:
+            type: string
+          description: IDs of start.conf records that were deleted since the cursor
+
+    # -----------------------------------------------------------------------
+    # Host
+    # -----------------------------------------------------------------------
+    HostRecord:
+      type: object
+      required:
+        - mac
+        - hostname
+        - room
+        - school
+        - hostgroup
+        - pxeEnabled
+        - pxeFlag
+        - startConfId
+        - updatedAt
+      properties:
+        mac:
+          type: string
+          pattern: "^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$"
+          description: Primary key. Upper-case colon-separated MAC address.
+          examples: ["AA:BB:CC:DD:EE:01"]
+        hostname:
+          type: string
+          description: Unique hostname (e.g. `r100-pc01`)
+          examples: ["r100-pc01"]
+        ip:
+          type: ["string", "null"]
+          format: ipv4
+          description: |
+            Static IPv4 address or `null` for DHCP-assigned.
+          examples: ["10.0.100.1", null]
+        room:
+          type: string
+          description: Room name (maps to linuxmuster.net room / location)
+          examples: ["r100"]
+        school:
+          type: string
+          description: School identifier (multi-school support)
+          default: "default-school"
+          examples: ["default-school"]
+        hostgroup:
+          type: string
+          description: |
+            Device group name, identical to the config name. Used as DHCP
+            Option 40 (NIS domain) so the PXE client receives the correct
+            start.conf via `option nis-domain`.
+          examples: ["win11_efi_sata"]
+        pxeEnabled:
+          type: boolean
+          description: Whether PXE network boot is enabled for this host
+          examples: [true]
+        pxeFlag:
+          type: integer
+          enum: [0, 1, 2]
+          description: |
+            PXE flag from linuxmuster.net devices.csv:
+            - `0`: PXE disabled
+            - `1`: PXE enabled (normal)
+            - `2`: PXE enabled (runonce/update mode)
+          examples: [1]
+        dhcpOptions:
+          type: string
+          description: Raw extra DHCP options string (rarely used)
+          default: ""
+          examples: [""]
+        startConfId:
+          type: string
+          description: ID of the associated start.conf (usually equals `hostgroup`)
+          examples: ["win11_efi_sata"]
+        policies:
+          $ref: "#/components/schemas/HostPolicies"
+        updatedAt:
+          type: string
+          format: date-time
+          description: Last modification timestamp (ISO 8601)
+          examples: ["2026-02-26T08:10:00Z"]
+
+    HostPolicies:
+      type: object
+      description: Per-host boot policy overrides
+      properties:
+        bootDefault:
+          type: string
+          enum: [start, sync, new]
+          description: Default boot action
+          default: "sync"
+          examples: ["sync"]
+        timeout:
+          type: integer
+          minimum: 0
+          description: GRUB menu timeout in seconds (0 = no timeout)
+          default: 5
+          examples: [5]
+        hiddenMenu:
+          type: boolean
+          description: Whether the GRUB boot menu is hidden
+          default: false
+          examples: [false]
+
+    # -----------------------------------------------------------------------
+    # StartConf
+    # -----------------------------------------------------------------------
+    StartConfRecord:
+      type: object
+      required: [id, content, hash, updatedAt]
+      properties:
+        id:
+          type: string
+          pattern: "^[a-zA-Z0-9_-]+$"
+          description: Config name used as filename suffix (`start.conf.<id>`)
+          examples: ["win11_efi_sata"]
+        content:
+          type: string
+          description: Complete start.conf file content
+        hash:
+          type: string
+          pattern: "^[0-9a-f]{64}$"
+          description: SHA-256 hex digest of the content
+          examples: ["a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2"]
+        updatedAt:
+          type: string
+          format: date-time
+          examples: ["2026-02-26T07:00:00Z"]
+
+    # -----------------------------------------------------------------------
+    # Config (parsed)
+    # -----------------------------------------------------------------------
+    ConfigRecord:
+      type: object
+      required: [id, name, osEntries, partitions, grubPolicy, updatedAt]
+      properties:
+        id:
+          type: string
+          examples: ["win11_efi_sata"]
+        name:
+          type: string
+          description: Human-readable config name
+          examples: ["Windows 11 EFI SATA"]
+        osEntries:
+          type: array
+          items:
+            $ref: "#/components/schemas/OsEntry"
+        partitions:
+          type: array
+          items:
+            $ref: "#/components/schemas/PartitionEntry"
+        grubPolicy:
+          $ref: "#/components/schemas/GrubPolicy"
+        updatedAt:
+          type: string
+          format: date-time
+          examples: ["2026-02-26T07:00:00Z"]
+
+    OsEntry:
+      type: object
+      required: [name, startEnabled, syncEnabled, newEnabled]
+      properties:
+        name:
+          type: string
+          examples: ["Windows 11"]
+        version:
+          type: string
+          examples: ["24H2"]
+        iconname:
+          type: string
+          description: SVG icon filename from `/srv/linbo/icons/`
+          examples: ["win10.svg"]
+        baseimage:
+          type: string
+          description: QCOW2 image filename
+          examples: ["win11.qcow2"]
+        boot:
+          type: string
+          description: Boot partition device path
+          examples: ["/dev/sda3"]
+        root:
+          type: string
+          description: Root partition device path
+          examples: ["/dev/sda3"]
+        kernel:
+          type: string
+          description: Kernel path or "auto"
+          examples: ["auto"]
+        initrd:
+          type: string
+          description: Initrd path (empty for Windows)
+          examples: [""]
+        append:
+          type: string
+          description: Kernel append parameters
+          examples: [""]
+        startEnabled:
+          type: boolean
+          description: Whether the Start action is available
+          examples: [true]
+        syncEnabled:
+          type: boolean
+          description: Whether the Sync action is available
+          examples: [true]
+        newEnabled:
+          type: boolean
+          description: Whether the New (reinstall) action is available
+          examples: [true]
+
+    PartitionEntry:
+      type: object
+      required: [device]
+      properties:
+        device:
+          type: string
+          description: Partition device path
+          examples: ["/dev/sda1"]
+        label:
+          type: string
+          examples: ["efi"]
+        size:
+          type: string
+          description: Partition size (e.g. "200M", "80G", empty for remainder)
+          examples: ["200M"]
+        fsType:
+          type: string
+          description: Filesystem type (vfat, ntfs, ext4, etc.)
+          examples: ["vfat"]
+        bootable:
+          type: boolean
+          default: false
+          examples: [true]
+
+    GrubPolicy:
+      type: object
+      properties:
+        timeout:
+          type: integer
+          minimum: 0
+          description: GRUB menu timeout in seconds
+          default: 5
+          examples: [5]
+        defaultEntry:
+          type: integer
+          minimum: 0
+          description: Zero-based index of the default OS entry
+          default: 0
+          examples: [0]
+        hiddenMenu:
+          type: boolean
+          description: Whether the GRUB menu is hidden (direct boot)
+          default: false
+          examples: [false]
+
+    # -----------------------------------------------------------------------
+    # DHCP Reservation
+    # -----------------------------------------------------------------------
+    DhcpReservation:
+      type: object
+      required: [mac, hostname, pxeEnabled, hostgroup, bootPolicy]
+      properties:
+        mac:
+          type: string
+          pattern: "^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$"
+          examples: ["AA:BB:CC:DD:EE:01"]
+        hostname:
+          type: string
+          examples: ["r100-pc01"]
+        ip:
+          type: ["string", "null"]
+          format: ipv4
+          description: Static IP or null for DHCP pool assignment
+          examples: ["10.0.100.1"]
+        pxeEnabled:
+          type: boolean
+          examples: [true]
+        hostgroup:
+          type: string
+          description: Used as DHCP Option 40 (NIS domain)
+          examples: ["win11_efi_sata"]
+        bootPolicy:
+          $ref: "#/components/schemas/BootPolicy"
+
+    BootPolicy:
+      type: object
+      required: [arch, bootfile, nextServer]
+      properties:
+        arch:
+          type: string
+          enum: ["efi64", "efi32", "bios"]
+          description: PXE client architecture
+          examples: ["efi64"]
+        bootfile:
+          type: string
+          description: TFTP boot file path relative to TFTP root
+          examples: ["boot/grub/x86_64-efi/core.efi"]
+        nextServer:
+          type: string
+          format: ipv4
+          description: TFTP next-server IP
+          examples: ["10.0.0.1"]
+
+    # -----------------------------------------------------------------------
+    # Webhook
+    # -----------------------------------------------------------------------
+    WebhookRegistration:
+      type: object
+      required: [url, events, secret]
+      properties:
+        url:
+          type: string
+          format: uri
+          description: HTTPS callback URL
+          examples: ["https://10.0.0.13:3000/api/v1/webhooks/lmn"]
+        events:
+          type: array
+          items:
+            type: string
+            enum:
+              - "hosts.changed"
+              - "startconfs.changed"
+              - "configs.changed"
+              - "dhcp.changed"
+          minItems: 1
+          description: Event types to subscribe to
+        secret:
+          type: string
+          minLength: 16
+          description: |
+            Shared secret for HMAC-SHA256 signature verification.
+            The server sends the signature in the `X-Webhook-Signature` header.
+
+    WebhookResponse:
+      type: object
+      required: [id, url, events, createdAt]
+      properties:
+        id:
+          type: string
+          description: Unique webhook registration ID
+          examples: ["wh_01HQXK3M7N8P9R0S1T2U3V4W"]
+        url:
+          type: string
+          format: uri
+          examples: ["https://10.0.0.13:3000/api/v1/webhooks/lmn"]
+        events:
+          type: array
+          items:
+            type: string
+        createdAt:
+          type: string
+          format: date-time
+          examples: ["2026-02-26T08:20:00Z"]
+
+    # -----------------------------------------------------------------------
+    # Error
+    # -----------------------------------------------------------------------
+    Error:
+      type: object
+      required: [error, message]
+      properties:
+        error:
+          type: string
+          description: Machine-readable error code
+          examples: ["UNAUTHORIZED"]
+        message:
+          type: string
+          description: Human-readable error description
+          examples: ["Missing or invalid Authorization header"]
+        details:
+          type: object
+          additionalProperties: true
+          description: Optional structured error details

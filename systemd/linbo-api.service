@@ -1,0 +1,25 @@
+[Unit]
+Description=LINBO Native API Server
+Documentation=https://github.com/linuxmuster/linbo-native
+After=network.target linbo-setup.service
+Requires=linbo-setup.service
+
+[Service]
+Type=simple
+User=linbo
+Group=linbo
+WorkingDirectory=/srv/linbo-api
+EnvironmentFile=/etc/linbo-native/.env
+ExecStart=/usr/bin/node /srv/linbo-api/src/index.js
+Restart=on-failure
+RestartSec=5s
+StartLimitIntervalSec=120s
+StartLimitBurst=5
+TimeoutStopSec=30s
+KillSignal=SIGTERM
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=linbo-api
+
+[Install]
+WantedBy=multi-user.target

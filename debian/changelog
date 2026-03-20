@@ -1,0 +1,10 @@
+linbo-docker (1.0.0-1) stable; urgency=medium
+
+  * Initial release
+  * Replaces linuxmuster-cachingserver-satellite
+  * Auto-discovery setup from LMN server-info API
+  * Full ISC DHCP server with all LMN-compatible options
+  * 106 REST API endpoints with Swagger documentation
+  * React web frontend with real-time WebSocket updates
+
+ -- Amo Lani <amo@edulution.io>  Wed, 19 Mar 2026 12:00:00 +0100

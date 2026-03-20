@@ -1,0 +1,38 @@
+[Unit]
+Description=LMN Authority API
+Documentation=https://github.com/linuxmuster/linbo-docker
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=lmn-authority
+Group=lmn-authority
+EnvironmentFile=/etc/lmn-authority-api/lmn-authority-api.conf
+WorkingDirectory=/opt/lmn-authority-api
+
+# NOTE: Rate limiter is in-memory. Do NOT use --workers >1 without switching
+# to a shared-state rate limiter (Redis, SQLite). See AC-2.
+ExecStart=/opt/lmn-authority-api/venv/bin/uvicorn \
+    lmn_authority.main:app \
+    --host 0.0.0.0 \
+    --port 8400 \
+    --workers 1 \
+    --log-level info
+
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=lmn-authority-api
+
+# Security hardening
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/lmn-authority-api
+ReadOnlyPaths=/etc/linuxmuster /srv/linbo /etc/lmn-authority-api
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

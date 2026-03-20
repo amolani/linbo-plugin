@@ -1,0 +1,25 @@
+#!/bin/bash
+# Pre-repack hook: Inject locale files for Qt GUI (linbo_gui) support
+# The API container runs on Ubuntu and has native locale files.
+# The reference LMN update-linbofs has copy_locale() which does the same.
+# CWD = extracted linbofs root (relative paths work)
+
+echo "  - Injecting locale files..."
+
+mkdir -p usr/lib/locale usr/share/i18n etc
+
+# locale-archive (CRITICAL for Qt GUI text rendering)
+cp /usr/lib/locale/locale-archive usr/lib/locale/ 2>/dev/null
+
+# i18n data (charmap definitions, locale sources)
+cp -r /usr/share/i18n/* usr/share/i18n/ 2>/dev/null
+
+# locale config files
+cp /etc/locale.alias etc/ 2>/dev/null
+echo "LANG=de_DE.UTF-8" > etc/locale.conf
+echo "KEYMAP=de-latin1" > etc/vconsole.conf
+
+# timezone
+cp /usr/share/zoneinfo/Europe/Berlin etc/localtime 2>/dev/null
+
+echo "  - Locale injection complete"
