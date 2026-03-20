@@ -9,7 +9,7 @@ const fs = require('fs').promises;
 const path = require('path');
 const execAsync = util.promisify(exec);
 
-const UPDATE_SCRIPT = process.env.UPDATE_LINBOFS_SCRIPT || '/usr/share/linuxmuster/linbo/update-linbofs.sh';
+const UPDATE_SCRIPT = process.env.UPDATE_LINBOFS_SCRIPT || '/usr/sbin/update-linbofs';
 const LINBO_DIR = process.env.LINBO_DIR || '/srv/linbo';
 const CONFIG_DIR = process.env.CONFIG_DIR || '/etc/linuxmuster/linbo';
 
@@ -87,8 +87,8 @@ async function updateLinbofs(options = {}) {
       throw new Error(`Update script not found or not executable: ${UPDATE_SCRIPT}`);
     }
 
-    const useFakeroot = await isFakerootAvailable();
-    const cmd = useFakeroot ? `fakeroot bash ${UPDATE_SCRIPT}` : `bash ${UPDATE_SCRIPT}`;
+    // update-linbofs requires root — use sudo (configured in /etc/sudoers.d/linbo-services)
+    const cmd = `sudo ${UPDATE_SCRIPT}`;
     const { stdout, stderr } = await execAsync(cmd, {
       env,
       timeout: 300000, // 5 minute timeout
@@ -144,9 +144,8 @@ async function updateLinbofsStream(onData, onError, options = {}) {
       ...(options.env || {}),
     };
 
-    const child = useFakeroot
-      ? spawn('fakeroot', ['bash', UPDATE_SCRIPT], { env })
-      : spawn('bash', [UPDATE_SCRIPT], { env });
+    // update-linbofs requires root — use sudo (configured in /etc/sudoers.d/linbo-services)
+    const child = spawn('sudo', [UPDATE_SCRIPT], { env });
 
     child.stdout.on('data', (data) => {
       if (onData) onData(data.toString());

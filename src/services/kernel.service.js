@@ -113,10 +113,16 @@ async function writeCustomKernelConfig(variant) {
   if (!VALID_VARIANTS.includes(variant)) {
     throw new Error(`Invalid variant: ${variant}. Must be one of: ${VALID_VARIANTS.join(', ')}`);
   }
-  const content = `# LINBO kernel variant - managed by linbo-docker\n# Do not edit manually. Use API: POST /system/kernel-switch\nKERNELPATH="${variant}"\n`;
-  const tmp = CUSTOM_KERNEL_FILE + '.tmp.' + process.pid;
-  await fs.writeFile(tmp, content);
-  await fs.rename(tmp, CUSTOM_KERNEL_FILE);
+  if (variant === 'stable') {
+    // stable is the default — remove custom_kernel file so update-linbofs uses default
+    await fs.unlink(CUSTOM_KERNEL_FILE).catch(() => {});
+  } else {
+    // longterm/legacy — update-linbofs accepts these as variant names
+    const content = `# LINBO kernel variant - managed by linbo-plugin API\n# Do not edit manually. Use API: POST /system/kernel-switch\nKERNELPATH="${variant}"\n`;
+    const tmp = CUSTOM_KERNEL_FILE + '.tmp.' + process.pid;
+    await fs.writeFile(tmp, content);
+    await fs.rename(tmp, CUSTOM_KERNEL_FILE);
+  }
 }
 
 // =============================================================================
