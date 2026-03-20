@@ -1,17 +1,20 @@
 /**
- * LINBO Docker - Container Log Streaming
+ * LINBO Native - Service Log Streaming
  *
- * Uses dockerode to stream Docker container logs in real-time.
- * On-demand streaming with ref-counting: one stream per container,
+ * Uses journald (systemd journal) to stream native service logs.
+ * isAvailable() returns false when /usr/bin/journalctl is absent.
+ *
+ * On-demand streaming with ref-counting: one stream per service unit,
  * shared across multiple WS clients, cleanup when last client unsubscribes.
  */
 
+const fs = require('fs');
+const { execFile, spawn } = require('child_process');
+
 const BATCH_INTERVAL_MS = 100;
+const JOURNALCTL_PATH = '/usr/bin/journalctl';
 
-let Docker;
-let docker;
-
-// Active streams: containerName -> { stream, clients: Set<ws>, batchTimer, pendingBatch }
+// Active streams: serviceName -> { proc, clients: Set<ws>, batchTimer, pendingBatch }
 const activeStreams = new Map();
 
 // WebSocket broadcast function (injected at init)
@@ -26,163 +29,145 @@ let wssRef = null;
 function init(broadcast, wss) {
   broadcastFn = broadcast;
   wssRef = wss;
-
-  try {
-    Docker = require('dockerode');
-    docker = new Docker({ socketPath: '/var/run/docker.sock' });
-    console.log('  Container Logs: Docker socket connected');
-  } catch (err) {
-    console.warn('  Container Logs: dockerode not available or Docker socket not mounted:', err.message);
-    docker = null;
-  }
 }
 
 /**
- * Check if Docker is available.
+ * Check if journald is available (journalctl binary exists).
+ * @returns {boolean}
  */
 function isAvailable() {
-  return docker !== null;
+  return fs.existsSync(JOURNALCTL_PATH);
 }
 
 /**
- * List running containers matching linbo-* prefix.
- * @returns {Promise<Array<{name: string, id: string, state: string, status: string}>>}
+ * Ensure service name has .service suffix for journald queries.
+ * @param {string} name
+ * @returns {string}
  */
-async function listContainers() {
-  if (!docker) return [];
+function toUnitName(name) {
+  return name.endsWith('.service') ? name : `${name}.service`;
+}
 
+/**
+ * Parse a single journald JSON line into a log entry.
+ * @param {string} line - JSON string from journalctl --output=json
+ * @returns {object|null}
+ */
+function parseJournalLine(line) {
+  if (!line.trim()) return null;
   try {
-    const containers = await docker.listContainers({ all: false });
-    return containers
-      .map((c) => ({
-        name: (c.Names[0] || '').replace(/^\//, ''),
-        id: c.Id.slice(0, 12),
-        state: c.State,
-        status: c.Status,
-        image: c.Image,
-      }))
-      .filter((c) => c.name.startsWith('linbo-'))
-      .sort((a, b) => a.name.localeCompare(b.name));
-  } catch (err) {
-    console.error('[containerLogs] listContainers error:', err.message);
-    return [];
+    const obj = JSON.parse(line);
+    const tsMicros = parseInt(obj.__REALTIME_TIMESTAMP || '0', 10);
+    const priority = parseInt(obj.PRIORITY || '6', 10);
+    return {
+      stream: priority <= 3 ? 'stderr' : 'stdout',
+      message: obj.MESSAGE || '',
+      timestamp: new Date(tsMicros / 1000).toISOString(),
+    };
+  } catch {
+    return null;
   }
 }
 
 /**
- * Get recent logs from a container (for catchup).
- * @param {string} containerName
+ * List systemd units matching linbo-* pattern via journalctl.
+ * @returns {Promise<Array<{name: string, id: string, state: string, status: string, image: string}>>}
+ */
+async function listContainers() {
+  if (!isAvailable()) return [];
+
+  return new Promise((resolve) => {
+    execFile(JOURNALCTL_PATH, ['--field=_SYSTEMD_UNIT', '--no-pager'], (err, stdout) => {
+      if (err || !stdout) return resolve([]);
+      const units = [...new Set(
+        stdout.trim().split('\n')
+          .map(u => u.trim())
+          .filter(u => u.startsWith('linbo-') && u.endsWith('.service'))
+      )];
+      resolve(units.map(unit => ({
+        name: unit.replace(/\.service$/, ''),
+        id: 'systemd',
+        state: 'active',
+        status: 'running (journald)',
+        image: '',
+      })));
+    });
+  });
+}
+
+/**
+ * Get recent logs from a service via journald.
+ * @param {string} serviceName
  * @param {number} tail - Number of lines
  * @returns {Promise<Array<{stream: string, message: string, timestamp: string}>>}
  */
-async function getRecentLogs(containerName, tail = 200) {
-  if (!docker) return [];
+async function getRecentLogs(serviceName, tail = 200) {
+  if (!isAvailable()) return [];
 
-  try {
-    const container = docker.getContainer(containerName);
-    const logBuffer = await container.logs({
-      follow: false,
-      stdout: true,
-      stderr: true,
-      tail,
-      timestamps: true,
+  const unit = toUnitName(serviceName);
+  return new Promise((resolve) => {
+    execFile(JOURNALCTL_PATH, [
+      '-u', unit,
+      '-n', String(tail),
+      '--output=json',
+      '--no-pager',
+    ], { maxBuffer: 10 * 1024 * 1024 }, (err, stdout) => {
+      if (err || !stdout) return resolve([]);
+      const entries = stdout.trim().split('\n')
+        .map(parseJournalLine)
+        .filter(Boolean);
+      resolve(entries);
     });
-
-    return parseDockerLogs(logBuffer);
-  } catch (err) {
-    console.error(`[containerLogs] getRecentLogs(${containerName}) error:`, err.message);
-    return [];
-  }
+  });
 }
 
 /**
- * Parse Docker multiplexed log output.
- * Docker log format: 8-byte header + payload per frame.
- * Header[0] = stream type (0=stdin, 1=stdout, 2=stderr)
- * Header[4..7] = payload size (big-endian uint32)
- */
-function parseDockerLogs(buffer) {
-  if (!Buffer.isBuffer(buffer)) {
-    // Sometimes Docker returns a string (TTY mode)
-    const str = typeof buffer === 'string' ? buffer : buffer.toString('utf8');
-    return str.split('\n').filter(Boolean).map((line) => {
-      const tsMatch = line.match(/^(\d{4}-\d{2}-\d{2}T[\d:.]+Z)\s*(.*)/);
-      return {
-        stream: 'stdout',
-        message: tsMatch ? tsMatch[2] : line,
-        timestamp: tsMatch ? tsMatch[1] : new Date().toISOString(),
-      };
-    });
-  }
-
-  const entries = [];
-  let offset = 0;
-
-  while (offset < buffer.length - 8) {
-    const streamType = buffer[offset];
-    const payloadSize = buffer.readUInt32BE(offset + 4);
-    offset += 8;
-
-    if (offset + payloadSize > buffer.length) break;
-
-    const payload = buffer.slice(offset, offset + payloadSize).toString('utf8').trim();
-    offset += payloadSize;
-
-    if (!payload) continue;
-
-    const stream = streamType === 2 ? 'stderr' : 'stdout';
-
-    // Parse timestamp if present (Docker adds them with --timestamps)
-    const tsMatch = payload.match(/^(\d{4}-\d{2}-\d{2}T[\d:.]+Z)\s*(.*)/s);
-    entries.push({
-      stream,
-      message: tsMatch ? tsMatch[2] : payload,
-      timestamp: tsMatch ? tsMatch[1] : new Date().toISOString(),
-    });
-  }
-
-  return entries;
-}
-
-/**
- * Subscribe a WS client to container log stream.
+ * Subscribe a WS client to service log stream via journald.
  * Starts streaming if this is the first subscriber.
- * @param {string} containerName
+ * @param {string} serviceName
  * @param {WebSocket} ws - The subscribing client
  */
-async function subscribe(containerName, ws) {
-  if (!docker) return;
+async function subscribe(serviceName, ws) {
+  if (!isAvailable()) return;
 
-  // If already streaming this container, just add client
-  if (activeStreams.has(containerName)) {
-    const streamInfo = activeStreams.get(containerName);
+  const unit = toUnitName(serviceName);
+
+  // If already streaming this service, just add client
+  if (activeStreams.has(serviceName)) {
+    const streamInfo = activeStreams.get(serviceName);
     streamInfo.clients.add(ws);
     return;
   }
 
-  // Start new stream
+  // Start new journald stream
   try {
-    const container = docker.getContainer(containerName);
-    const stream = await container.logs({
-      follow: true,
-      stdout: true,
-      stderr: true,
-      tail: 0, // Don't replay — catchup is done via REST
-      timestamps: true,
-    });
+    const proc = spawn(JOURNALCTL_PATH, [
+      '-u', unit,
+      '-f', '-n', '0',
+      '--output=json',
+    ]);
 
     const streamInfo = {
-      stream,
+      proc,
       clients: new Set([ws]),
       pendingBatch: [],
       batchTimer: null,
     };
 
-    activeStreams.set(containerName, streamInfo);
+    activeStreams.set(serviceName, streamInfo);
 
-    // Handle multiplexed stream data
-    stream.on('data', (chunk) => {
-      const entries = parseDockerLogs(chunk);
+    let buffer = '';
+    proc.stdout.on('data', (chunk) => {
+      buffer += chunk.toString();
+      const lines = buffer.split('\n');
+      buffer = lines.pop(); // Keep incomplete line
+
+      const entries = [];
+      for (const line of lines) {
+        const entry = parseJournalLine(line);
+        if (entry) entries.push(entry);
+      }
+
       if (entries.length === 0) return;
 
       streamInfo.pendingBatch.push(...entries);
@@ -198,7 +183,7 @@ async function subscribe(containerName, ws) {
 
           if (broadcastFn) {
             broadcastFn('container.log.batch', {
-              container: containerName,
+              container: serviceName,
               entries: batch,
             });
           }
@@ -206,21 +191,21 @@ async function subscribe(containerName, ws) {
       }
     });
 
-    stream.on('error', (err) => {
-      console.error(`[containerLogs] Stream error for ${containerName}:`, err.message);
-      cleanup(containerName);
+    proc.on('error', (err) => {
+      console.error(`[containerLogs] Stream error for ${serviceName}:`, err.message);
+      cleanup(serviceName);
     });
 
-    stream.on('end', () => {
-      cleanup(containerName);
+    proc.on('close', () => {
+      cleanup(serviceName);
     });
   } catch (err) {
-    console.error(`[containerLogs] subscribe(${containerName}) error:`, err.message);
+    console.error(`[containerLogs] subscribe(${serviceName}) error:`, err.message);
   }
 }
 
 /**
- * Unsubscribe a WS client from container log stream.
+ * Unsubscribe a WS client from service log stream.
  * Stops streaming if this was the last subscriber.
  * @param {string} containerName
  * @param {WebSocket} ws
@@ -237,7 +222,7 @@ function unsubscribe(containerName, ws) {
 }
 
 /**
- * Unsubscribe a WS client from ALL container streams (on disconnect).
+ * Unsubscribe a WS client from ALL service streams (on disconnect).
  * @param {WebSocket} ws
  */
 function unsubscribeAll(ws) {
@@ -250,23 +235,23 @@ function unsubscribeAll(ws) {
 }
 
 /**
- * Cleanup: destroy stream and remove from active map.
+ * Cleanup: kill process and remove from active map.
  */
-function cleanup(containerName) {
-  const streamInfo = activeStreams.get(containerName);
+function cleanup(serviceName) {
+  const streamInfo = activeStreams.get(serviceName);
   if (!streamInfo) return;
 
   if (streamInfo.batchTimer) clearTimeout(streamInfo.batchTimer);
 
   try {
-    if (streamInfo.stream && typeof streamInfo.stream.destroy === 'function') {
-      streamInfo.stream.destroy();
+    if (streamInfo.proc && typeof streamInfo.proc.kill === 'function') {
+      streamInfo.proc.kill();
     }
   } catch {
     // Ignore cleanup errors
   }
 
-  activeStreams.delete(containerName);
+  activeStreams.delete(serviceName);
 }
 
 module.exports = {
