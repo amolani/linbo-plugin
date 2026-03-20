@@ -4,7 +4,7 @@
  *
  * Key loading is LAZY: the SSH private key is loaded on first use,
  * not at module import time. This eliminates the race condition where
- * the API starts before the SSH container has generated keys.
+ * the API starts before setup.sh has provisioned the key file.
  */
 
 const { Client } = require('ssh2');
@@ -59,7 +59,7 @@ function getPrivateKey() {
 
   // No key available
   throw new Error(
-    `SSH private key not available. Ensure SSH container has started and generated keys. Expected: ${linboKeyPath}`
+    `SSH private key not available. Ensure setup.sh has been run and linbo_client_key exists. Expected: ${linboKeyPath}`
   );
 }
 
