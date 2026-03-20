@@ -93,10 +93,15 @@ describe('containerLogs — Phase 5 requirements', () => {
   // =========================================================================
   // API-08: containerLogs module degrades gracefully without Docker
   // =========================================================================
-  describe('containerLogs module degrades gracefully without Docker (API-08)', () => {
+  describe('containerLogs module degrades gracefully without journalctl (API-08)', () => {
     let containerLogs;
 
     beforeAll(() => {
+      // Mock fs.existsSync to simulate missing journalctl
+      jest.spyOn(fs, 'existsSync').mockImplementation((p) => {
+        if (p === '/usr/bin/journalctl') return false;
+        return jest.requireActual('fs').existsSync(p);
+      });
       // Clear any cached version and require fresh
       const modPath = require.resolve('../../../src/lib/containerLogs');
       delete require.cache[modPath];
@@ -105,11 +110,15 @@ describe('containerLogs — Phase 5 requirements', () => {
       containerLogs.init(() => {}, {});
     });
 
-    test('isAvailable() returns false', () => {
+    afterAll(() => {
+      jest.restoreAllMocks();
+    });
+
+    test('isAvailable() returns false when journalctl missing', () => {
       expect(containerLogs.isAvailable()).toBe(false);
     });
 
-    test('listContainers() resolves to []', async () => {
+    test('listContainers() resolves to [] when journalctl missing', async () => {
       const result = await containerLogs.listContainers();
       expect(result).toEqual([]);
     });
