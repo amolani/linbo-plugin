@@ -121,7 +121,11 @@ Plans:
   1. The API returns correct host data read directly from /srv/linbo/ start.conf files — no cache layer required
   2. Calling the rsync-trigger API endpoint causes rsyncd to reload its configuration via systemd
   3. The API can read and write GRUB config files under /srv/linbo/boot/grub/ and the changes persist across service restarts
-**Plans**: TBD
+**Plans**: 2 plans
+
+Plans:
+- [ ] 06-01-PLAN.md — devices-csv-reader.js + startconf-parser.js + linbo-fs.service.js (pure library modules)
+- [ ] 06-02-PLAN.md — wire native FS fallbacks into sync.js routes + POST /sync/services/reload + setup-linbo.sh sudoers
 
 ### Phase 7: Caching-Satellite Features
 **Goal**: The server acts as a full Caching-Satellite: multiple schools sync correctly via the school parameter, LINBO images are cached locally, new clients are discovered automatically, and first-boot sync triggers without manual intervention
@@ -179,7 +183,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 3. DHCP + PXE Boot | 3/3 | Complete | 2026-03-20 |
 | 4. API Filesystem Migration | 3/3 | Complete | 2026-03-20 |
 | 5. Dependency Cleanup | 3/3 | Complete | 2026-03-20 |
-| 6. Native LINBO File Access | 0/? | Not started | - |
+| 6. Native LINBO File Access | 0/2 | Not started | - |
 | 7. Caching-Satellite Features | 0/? | Not started | - |
 | 8. Frontend Build + nginx | 0/? | Not started | - |
 | 9. Docker Artifact Removal | 0/? | Not started | - |
