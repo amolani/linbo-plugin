@@ -8,8 +8,8 @@
 ### Native LINBO Basis
 
 - [x] **BASE-01**: linuxmuster-linbo7 per APT installiert — vanilla, kein Touch
-- [ ] **BASE-02**: API liest native LINBO-Dateien direkt (/srv/linbo/, start.confs, GRUB-Configs)
-- [ ] **BASE-03**: API steuert native LINBO-Dienste (rsync, tftpd-hpa) ueber systemd/Filesystem
+- [x] **BASE-02**: API liest native LINBO-Dateien direkt (/srv/linbo/, start.confs, GRUB-Configs)
+- [x] **BASE-03**: API steuert native LINBO-Dienste (rsync, tftpd-hpa) ueber systemd/Filesystem
 
 ### API Nativ
 
@@ -81,8 +81,8 @@
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | BASE-01 | Phase 2 | Complete |
-| BASE-02 | Phase 6 | Pending |
-| BASE-03 | Phase 6 | Pending |
+| BASE-02 | Phase 6 | Complete |
+| BASE-03 | Phase 6 | Complete |
 | API-01 | Phase 2 | Complete |
 | API-02 | Phase 4 | Complete |
 | API-03 | Phase 4 | Complete |
