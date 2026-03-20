@@ -1,5 +1,5 @@
 /**
- * LINBO Docker - LINBO Update Sub-Router
+ * LINBO Plugin - LINBO Update Sub-Router
  * 4 endpoints: linbo-version, linbo-update POST, linbo-update/status, linbo-update/cancel
  */
 

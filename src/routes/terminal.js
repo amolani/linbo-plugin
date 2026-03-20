@@ -1,5 +1,5 @@
 /**
- * LINBO Docker - Terminal Routes
+ * LINBO Plugin - Terminal Routes
  * REST endpoints for SSH terminal session management.
  */
 

@@ -1,5 +1,5 @@
 /**
- * LINBO Docker - Route Aggregator
+ * LINBO Plugin - Route Aggregator
  * All routes are sync-mode only (no Prisma/PostgreSQL).
  *
  * Exports an async factory function: await createRouter()
@@ -27,7 +27,7 @@ async function createRouter() {
   // API info endpoint
   router.get('/', (req, res) => {
     res.json({
-      message: 'LINBO Docker API',
+      message: 'LINBO Plugin API',
       version: 'v1',
       mode: 'sync',
       endpoints: {

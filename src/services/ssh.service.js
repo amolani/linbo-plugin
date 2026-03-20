@@ -1,5 +1,5 @@
 /**
- * LINBO Docker - SSH Service
+ * LINBO Plugin - SSH Service
  * Execute commands on hosts via SSH
  *
  * Key loading is LAZY: the SSH private key is loaded on first use,

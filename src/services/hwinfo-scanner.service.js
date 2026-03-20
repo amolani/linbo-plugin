@@ -1,5 +1,5 @@
 /**
- * LINBO Docker - HWInfo Scanner Service
+ * LINBO Plugin - HWInfo Scanner Service
  *
  * Background hwinfo scanner with Redis cache.
  * Scans LINBO clients via SSH and caches results for instant retrieval.

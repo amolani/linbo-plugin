@@ -1,5 +1,5 @@
 /**
- * LINBO Docker - Settings Service
+ * LINBO Plugin - Settings Service
  *
  * Runtime-configurable settings stored in Redis with env-var fallback.
  * Keys: config:{key} (String, no TTL).

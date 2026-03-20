@@ -1,5 +1,5 @@
 /**
- * LINBO Docker - dmesg Firmware Parser
+ * LINBO Plugin - dmesg Firmware Parser
  * Pure parser for extracting firmware events from dmesg output.
  * No I/O dependencies — only string processing.
  */

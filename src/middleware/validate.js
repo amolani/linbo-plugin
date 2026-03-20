@@ -1,5 +1,5 @@
 /**
- * LINBO Docker - Validation Middleware
+ * LINBO Plugin - Validation Middleware
  * Zod schemas for request validation
  */
 

@@ -1,5 +1,5 @@
 /**
- * LINBO Docker - Hooks Sub-Router
+ * LINBO Plugin - Hooks Sub-Router
  * GET /system/hooks - list installed hooks with observability data
  */
 

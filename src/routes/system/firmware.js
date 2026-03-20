@@ -1,5 +1,5 @@
 /**
- * LINBO Docker - Firmware Sub-Router
+ * LINBO Plugin - Firmware Sub-Router
  * Endpoints: firmware-detect, firmware-entries, firmware-status,
  * firmware-available, firmware-catalog, firmware-entries/bulk
  */

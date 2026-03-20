@@ -1,5 +1,5 @@
 /**
- * LINBO Docker - Internal Routes
+ * LINBO Plugin - Internal Routes
  * Internal API endpoints for RSYNC hooks and service-to-service communication
  * Redis-only mode — no Prisma/PostgreSQL dependencies.
  */

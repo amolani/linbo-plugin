@@ -1,5 +1,5 @@
 /**
- * LINBO Docker - LINBO Update Service
+ * LINBO Plugin - LINBO Update Service
  * APT-based version check and update for linuxmuster-linbo7 package
  */
 

@@ -1,5 +1,5 @@
 /**
- * LINBO Docker - Audit Logging Middleware
+ * LINBO Plugin - Audit Logging Middleware
  * Structural middleware (requestId, auditAction, auditWrites, getClientIp).
  * Audit persistence removed — no PostgreSQL/Prisma dependency.
  */

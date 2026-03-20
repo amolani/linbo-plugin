@@ -1,5 +1,5 @@
 /**
- * LINBO Docker - Driver Filesystem Utilities
+ * LINBO Plugin - Driver Filesystem Utilities
  * Recursive directory operations, symlink removal, hash computation, and manifest generation
  */
 

@@ -1,5 +1,5 @@
 /**
- * LINBO Docker - GRUB Theme Sub-Router
+ * LINBO Plugin - GRUB Theme Sub-Router
  * 10 endpoints: grub-theme GET/PUT/reset, icons list/serve/upload/delete,
  * logo serve/upload/reset
  */

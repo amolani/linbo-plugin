@@ -1,5 +1,5 @@
 /**
- * LINBO Docker - Terminal Service
+ * LINBO Plugin - Terminal Service
  * Interactive SSH session management for web terminal.
  *
  * Manages SSH connections to LINBO clients with PTY support

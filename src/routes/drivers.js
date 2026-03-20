@@ -1,5 +1,5 @@
 /**
- * LINBO Docker - Driver Profile Routes
+ * LINBO Plugin - Driver Profile Routes
  * Full CRUD endpoints for match.conf-based driver profiles and files.
  */
 

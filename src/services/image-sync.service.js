@@ -1,5 +1,5 @@
 /**
- * LINBO Docker - Image Sync Service
+ * LINBO Plugin - Image Sync Service
  *
  * Downloads QCOW2 images from the LMN Authority API via HTTP Range requests.
  * Features: resume support, MD5 verification, atomic directory swap,

@@ -1,5 +1,5 @@
 /**
- * LINBO Docker - Sync Service (DB-free)
+ * LINBO Plugin - Sync Service (DB-free)
  *
  * Syncs data from the LMN Authority API to local files + Redis cache.
  * Triggered manually via POST /api/v1/sync/trigger.

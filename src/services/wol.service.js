@@ -1,5 +1,5 @@
 /**
- * LINBO Docker - Wake-on-LAN Service
+ * LINBO Plugin - Wake-on-LAN Service
  * Send magic packets to wake up hosts
  *
  * Dual-path WoL:

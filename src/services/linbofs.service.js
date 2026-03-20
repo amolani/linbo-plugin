@@ -1,5 +1,5 @@
 /**
- * LINBO Docker - Linbofs Service
+ * LINBO Plugin - Linbofs Service
  * Manages linbofs64 updates and key injection
  */
 

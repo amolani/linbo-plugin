@@ -1,5 +1,5 @@
 /**
- * LINBO Docker - Images Routes
+ * LINBO Plugin - Images Routes
  * Image management via filesystem scanning (no database).
  *
  * Production layout: /srv/linbo/images/<base>/<base>.qcow2

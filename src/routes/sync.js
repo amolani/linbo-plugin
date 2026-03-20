@@ -1,5 +1,5 @@
 /**
- * LINBO Docker - Sync Routes
+ * LINBO Plugin - Sync Routes
  * Manual sync trigger, status, and read endpoints for synced data.
  *
  * Read endpoints serve data from Redis (populated by sync.service.js).

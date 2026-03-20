@@ -1,5 +1,5 @@
 /**
- * LINBO Docker - Driver Catalog
+ * LINBO Plugin - Driver Catalog
  * Loads curated PCI/USB device database + optional custom overlay
  * Provides search and lookup functions for the API and UI
  */

@@ -1,5 +1,5 @@
 /**
- * LINBO Docker - Hook Service
+ * LINBO Plugin - Hook Service
  * Scans hook directories and reads build manifests for observability
  */
 

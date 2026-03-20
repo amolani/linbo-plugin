@@ -1,5 +1,5 @@
 /**
- * LINBO Docker - Sync Operations Service
+ * LINBO Plugin - Sync Operations Service
  * Redis-based operation tracking for sync mode (no Prisma dependency).
  *
  * Reuses pure-logic functions from:

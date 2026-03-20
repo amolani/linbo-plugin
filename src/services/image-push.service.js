@@ -1,5 +1,5 @@
 /**
- * LINBO Docker - Image Push Service
+ * LINBO Plugin - Image Push Service
  *
  * Uploads QCOW2 images to the LMN Authority API via HTTP chunked uploads
  * with Content-Range resume support. Mirrors the pull pattern from

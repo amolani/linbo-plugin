@@ -1,10 +1,10 @@
-# LINBO Docker
+# LINBO Plugin
 
 **Docker-basierter LINBO Network Boot Server**
 
 [![Update Boot Files](https://github.com/amolani/linbo-docker/actions/workflows/update-boot-files.yml/badge.svg)](https://github.com/amolani/linbo-docker/actions/workflows/update-boot-files.yml)
 
-LINBO Docker ist eine containerisierte Version von [LINBO](https://github.com/linuxmuster/linuxmuster-linbo7) (Linux Network Boot). Es wird als Sync-Client an einen bestehenden linuxmuster.net-Server angebunden.
+LINBO Plugin ist eine containerisierte Version von [LINBO](https://github.com/linuxmuster/linuxmuster-linbo7) (Linux Network Boot). Es wird als Sync-Client an einen bestehenden linuxmuster.net-Server angebunden.
 
 > **Installationsanleitung:** [docs/INSTALL.md](docs/INSTALL.md) -- Schritt-fuer-Schritt von einem frischen Server bis zum ersten PXE-Boot.
 >
@@ -67,7 +67,7 @@ Sync-Modus einrichten: Siehe [INSTALL.md -- Sync-Modus](docs/INSTALL.md#7-sync-m
                              │ Read-Only
                              ▼
 ┌─────────────────────────────────────────────────────────┐
-│                   LINBO Docker                          │
+│                   LINBO Plugin                          │
 │                                                         │
 │  ┌──────┐  ┌──────┐  ┌──────┐  ┌──────┐  ┌──────────┐ │
 │  │ TFTP │  │RSYNC │  │ SSH  │  │ API  │  │   Web    │ │
@@ -220,7 +220,7 @@ Ausführliche Fehlerdiagnose: [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)
 
 ## Vergleich mit Production linuxmuster.net
 
-| Feature | Production | LINBO Docker |
+| Feature | Production | LINBO Plugin |
 |---------|-----------|-------------|
 | PXE Network Boot | ✅ | ✅ |
 | HTTP Boot (GRUB) | ❌ (nur TFTP) | ✅ |

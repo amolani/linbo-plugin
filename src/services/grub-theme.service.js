@@ -1,5 +1,5 @@
 /**
- * LINBO Docker - GRUB Theme Service
+ * LINBO Plugin - GRUB Theme Service
  * Manage GRUB boot menu appearance: colors, logo, icons, theme.txt generation
  */
 

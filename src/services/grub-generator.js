@@ -1,5 +1,5 @@
 /**
- * LINBO Docker - GRUB Config Generator (DB-free)
+ * LINBO Plugin - GRUB Config Generator (DB-free)
  *
  * Generates GRUB configuration files from data objects (HostRecord[], ConfigRecord[])
  * fetched from the LMN Authority API. Does NOT access Prisma/PostgreSQL.

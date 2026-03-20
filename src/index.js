@@ -54,7 +54,7 @@ function verifyWsToken(token) {
 const app = express();
 const server = http.createServer(app);
 
-// Trust proxies in private networks (Docker internal nginx)
+// Trust proxies in private networks (reverse proxy)
 app.set('trust proxy', 'loopback, linklocal, uniquelocal');
 
 // =============================================================================
@@ -91,10 +91,10 @@ const swaggerSpec = swaggerJsdoc({
   definition: {
     openapi: '3.0.0',
     info: {
-      title: 'LINBO Docker API',
+      title: 'LINBO Plugin API',
       version: process.env.npm_package_version || '1.0.0',
-      description: 'REST API for LINBO Docker — the modern caching server replacement for linuxmuster.net 7.3. Provides host management, image sync, remote operations, DHCP/GRUB config distribution, and real-time monitoring via WebSocket.',
-      contact: { name: 'LINBO Docker', url: 'https://github.com/amolani/linbo-docker' },
+      description: 'REST API for LINBO Plugin — the modern caching server replacement for linuxmuster.net 7.3. Provides host management, image sync, remote operations, DHCP/GRUB config distribution, and real-time monitoring via WebSocket.',
+      contact: { name: 'LINBO Plugin', url: 'https://github.com/amolani/linbo-docker' },
     },
     servers: [{ url: '/api/v1', description: 'API v1' }],
     components: {
@@ -116,14 +116,14 @@ const swaggerSpec = swaggerJsdoc({
       { name: 'GRUB', description: 'GRUB config generation and theme customization' },
       { name: 'Settings', description: 'Server configuration and LMN API connection' },
       { name: 'Terminal', description: 'SSH terminal sessions to LINBO clients' },
-      { name: 'Infrastructure', description: 'Docker containers, logs, hooks, WLAN' },
+      { name: 'Infrastructure', description: 'System services, logs, hooks, WLAN' },
     ],
   },
   apis: ['./src/routes/*.js', './src/routes/system/*.js'],
 });
 
 app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
-  customSiteTitle: 'LINBO Docker API Docs',
+  customSiteTitle: 'LINBO Plugin API Docs',
   customCss: '.swagger-ui .topbar { display: none }',
 }));
 app.get('/openapi.json', (req, res) => res.json(swaggerSpec));
@@ -240,7 +240,7 @@ const PORT = process.env.PORT || 3000;
 const HOST = process.env.HOST || '0.0.0.0';
 
 async function startServer() {
-  console.log('Starting LINBO Docker API Server (sync-only mode)...\n');
+  console.log('Starting LINBO Plugin API Server (sync-only mode)...\n');
 
   // Validate secrets before proceeding
   validateSecrets();
@@ -353,7 +353,7 @@ async function startServer() {
     // Send welcome message
     ws.send(JSON.stringify({
       type: 'connected',
-      message: 'Connected to LINBO Docker API WebSocket',
+      message: 'Connected to LINBO Plugin API WebSocket',
       timestamp: new Date().toISOString(),
     }));
   });
@@ -377,13 +377,13 @@ async function startServer() {
   logStream.init(websocket.broadcast);
   console.log('  Log Stream initialized');
 
-  // Initialize container log streaming (Docker socket required)
+  // Initialize container log streaming (journald required)
   const containerLogs = require('./lib/containerLogs');
   containerLogs.init(websocket.broadcast, wss);
   if (containerLogs.isAvailable()) {
     console.log('  Container Logs: ready');
   } else {
-    console.log('  Container Logs: unavailable (Docker socket not mounted)');
+    console.log('  Container Logs: unavailable (journald not available)');
   }
 
   // Initialize Terminal WebSocket Server (noServer to avoid conflict with main WS)
@@ -695,7 +695,7 @@ async function startServer() {
   // Start HTTP server
   server.listen(PORT, HOST, () => {
     console.log(`
-LINBO Docker API Server (sync-only)
+LINBO Plugin API Server (sync-only)
   REST API:     http://${HOST}:${PORT}/api/v1
   API Docs:     http://${HOST}:${PORT}/docs
   OpenAPI JSON: http://${HOST}:${PORT}/openapi.json

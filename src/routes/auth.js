@@ -1,5 +1,5 @@
 /**
- * LINBO Docker - Auth Routes
+ * LINBO Plugin - Auth Routes
  * POST /auth/login, /auth/logout, GET /auth/me
  *
  * Sync-only mode: env-admin login via ADMIN_USERNAME/ADMIN_PASSWORD.

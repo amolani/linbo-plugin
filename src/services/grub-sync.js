@@ -1,7 +1,7 @@
 /**
- * LINBO Docker - GRUB Config Sync
+ * LINBO Plugin - GRUB Config Sync
  * Writes raw GRUB configs from LMN Authority API to the TFTP volume.
- * Rewrites server= in kernel cmdlines to the Docker VM IP.
+ * Rewrites server= in kernel cmdlines to the server IP.
  * Creates hostcfg/ symlinks for GRUB hostname and MAC fallback.
  */
 
@@ -33,7 +33,7 @@ function rewriteGrubServerIp(content, newServerIp) {
  * Does NOT touch subdirectories (e.g. hostcfg/).
  *
  * @param {Array<{id: string, filename: string, content: string, updatedAt: string|null}>} grubConfigs
- * @param {string} serverIp - Docker VM IP for server= rewrite
+ * @param {string} serverIp - server IP for server= rewrite
  */
 async function writeGrubConfigs(grubConfigs, serverIp) {
   await fsp.mkdir(GRUB_DIR, { recursive: true });

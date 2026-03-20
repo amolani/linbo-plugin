@@ -1,5 +1,5 @@
 /**
- * LINBO Docker - Firmware Scanner
+ * LINBO Plugin - Firmware Scanner
  * Scans /lib/firmware for available firmware files with caching + mutex
  */
 

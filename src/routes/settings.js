@@ -1,5 +1,5 @@
 /**
- * LINBO Docker - Settings Routes
+ * LINBO Plugin - Settings Routes
  *
  * GET    /settings              — All settings (secrets masked)
  * PUT    /settings/:key         — Update setting (admin)

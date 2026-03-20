@@ -1,5 +1,5 @@
 /**
- * LINBO Docker - Driver Path Utilities
+ * LINBO Plugin - Driver Path Utilities
  * Single source of truth for all driver profile paths, constants, and security checks
  */
 

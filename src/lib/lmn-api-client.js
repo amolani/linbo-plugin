@@ -1,5 +1,5 @@
 /**
- * LINBO Docker - LMN API Client
+ * LINBO Plugin - LMN API Client
  * HTTP client for fetching LINBO data from linuxmuster-api (port 8001)
  * or the legacy Authority API (port 8400).
  *

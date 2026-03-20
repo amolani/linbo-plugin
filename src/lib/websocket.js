@@ -1,5 +1,5 @@
 /**
- * LINBO Docker - WebSocket Utilities
+ * LINBO Plugin - WebSocket Utilities
  * Real-time event broadcasting
  */
 

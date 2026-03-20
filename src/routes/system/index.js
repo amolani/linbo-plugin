@@ -1,5 +1,5 @@
 /**
- * LINBO Docker - System Routes Aggregator
+ * LINBO Plugin - System Routes Aggregator
  * Mounts all system sub-routers.
  */
 
@@ -49,17 +49,17 @@ router.get('/logs', (req, res) => {
   res.json({ entries: logStream.getRecentLogs(limit) });
 });
 
-// --- Container Log Endpoints ---
+// --- Service Log Endpoints ---
 /**
  * @openapi
  * /system/containers:
  *   get:
  *     tags: [Infrastructure]
- *     summary: List Docker containers
- *     description: Returns a list of running Docker containers. Returns available=false if Docker socket is not accessible.
+ *     summary: List system services
+ *     description: Returns a list of running system services. Returns available=false if journald is not available.
  *     responses:
  *       200:
- *         description: Container list with availability flag
+ *         description: Service list with availability flag
  *         content:
  *           application/json:
  *             schema:
@@ -86,7 +86,7 @@ router.get('/containers', async (req, res) => {
  * /system/containers/{name}/logs:
  *   get:
  *     tags: [Infrastructure]
- *     summary: Get logs for a specific Docker container
+ *     summary: Get logs for a specific system service
  *     parameters:
  *       - in: path
  *         name: name
@@ -116,12 +116,12 @@ router.get('/containers', async (req, res) => {
  *                 container:
  *                   type: string
  *       503:
- *         description: Docker socket not available
+ *         description: Journald not available
  */
 router.get('/containers/:name/logs', async (req, res) => {
   const containerLogs = require('../../lib/containerLogs');
   if (!containerLogs.isAvailable()) {
-    return res.status(503).json({ error: 'Docker socket not available' });
+    return res.status(503).json({ error: 'Journald not available' });
   }
   const tail = Math.min(parseInt(req.query.tail) || 200, 2000);
   const entries = await containerLogs.getRecentLogs(req.params.name, tail);

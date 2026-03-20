@@ -1,5 +1,5 @@
 /**
- * LINBO Docker - GRUB Config Sub-Router
+ * LINBO Plugin - GRUB Config Sub-Router
  * Uses grub-generator.js (DB-free) with Redis sync cache for host/config data.
  */
 

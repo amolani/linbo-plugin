@@ -1,5 +1,5 @@
 /**
- * LINBO Docker - Kernel Service
+ * LINBO Plugin - Kernel Service
  * Manages kernel variant switching (stable, longterm, legacy)
  */
 

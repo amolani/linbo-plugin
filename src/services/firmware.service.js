@@ -1,5 +1,5 @@
 /**
- * LINBO Docker - Firmware Service
+ * LINBO Plugin - Firmware Service
  * Manages firmware config entries for linbofs64 injection
  */
 
@@ -90,7 +90,7 @@ async function readFirmwareConfig() {
  * @param {string[]} entries - Array of firmware paths to write
  */
 async function writeFirmwareConfig(entries) {
-  const header = '# LINBO Docker - Firmware configuration\n'
+  const header = '# LINBO Plugin - Firmware configuration\n'
     + '# Managed by linbo-docker API. One entry per line.\n'
     + '# Entries are relative paths under /lib/firmware/\n'
     + '# Lines starting with # are comments.\n';

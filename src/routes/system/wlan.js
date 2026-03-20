@@ -1,5 +1,5 @@
 /**
- * LINBO Docker - WLAN Sub-Router
+ * LINBO Plugin - WLAN Sub-Router
  * 3 endpoints: wlan-config GET/PUT/DELETE
  */
 

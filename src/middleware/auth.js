@@ -1,5 +1,5 @@
 /**
- * LINBO Docker - Authentication Middleware
+ * LINBO Plugin - Authentication Middleware
  * JWT authentication with role-based access control.
  * Runs in sync-only mode (Redis, no PostgreSQL/Prisma).
  */

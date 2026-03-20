@@ -1,5 +1,5 @@
 /**
- * LINBO Docker - Firmware Catalog
+ * LINBO Plugin - Firmware Catalog
  * Static vendor catalog with prefix expansion, .zst transparency, and availability cache
  */
 

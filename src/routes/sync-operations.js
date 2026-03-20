@@ -1,5 +1,5 @@
 /**
- * LINBO Docker - Sync Operations Routes
+ * LINBO Plugin - Sync Operations Routes
  * Operations endpoints for sync mode (Redis-based, no Prisma).
  *
  * Endpoints:

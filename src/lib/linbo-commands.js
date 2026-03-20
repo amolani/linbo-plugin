@@ -1,5 +1,5 @@
 /**
- * LINBO Docker - Command Parsing Utilities
+ * LINBO Plugin - Command Parsing Utilities
  * Pure functions for parsing and validating LINBO command strings.
  * Command parsing and validation utilities (no DB dependency).
  */

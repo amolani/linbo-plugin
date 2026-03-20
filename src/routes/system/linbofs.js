@@ -1,5 +1,5 @@
 /**
- * LINBO Docker - Linbofs Sub-Router
+ * LINBO Plugin - Linbofs Sub-Router
  * 8 endpoints: update-linbofs, linbofs-status, linbofs-info, patch-status,
  * key-status, initialize-keys, generate-ssh-key, generate-dropbear-key
  */

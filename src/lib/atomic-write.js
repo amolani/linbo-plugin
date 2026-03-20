@@ -1,5 +1,5 @@
 /**
- * LINBO Docker - Atomic File Write Utility
+ * LINBO Plugin - Atomic File Write Utility
  * Crash-safe file writes: tmp → datasync → rename → dir-fsync
  */
 

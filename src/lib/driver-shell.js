@@ -1,5 +1,5 @@
 /**
- * LINBO Docker - Driver Shell Escaping Utilities
+ * LINBO Plugin - Driver Shell Escaping Utilities
  * Shell pattern character escaping for case statement generation
  */
 

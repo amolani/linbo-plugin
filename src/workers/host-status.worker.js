@@ -1,5 +1,5 @@
 /**
- * LINBO Docker - Host Status Worker (Redis-only, no Prisma)
+ * LINBO Plugin - Host Status Worker (Redis-only, no Prisma)
  *
  * Periodically scans all synced hosts via SSH port probe (TCP 2222)
  * and updates host:status:{ip} hashes in Redis with TTL.

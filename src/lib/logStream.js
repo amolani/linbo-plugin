@@ -1,5 +1,5 @@
 /**
- * LINBO Docker - API Log Stream
+ * LINBO Plugin - API Log Stream
  *
  * Intercepts console.log/error/warn/debug, stores in a ring buffer,
  * and broadcasts batched events via WebSocket for the frontend log panel.

@@ -1,5 +1,5 @@
 /**
- * LINBO Docker - start.conf Server Field Rewriter
+ * LINBO Plugin - start.conf Server Field Rewriter
  * Rewrites Server= and server= only within the [LINBO] section block.
  */
 

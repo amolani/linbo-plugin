@@ -1,5 +1,5 @@
 /**
- * LINBO Docker - Kernel Sub-Router
+ * LINBO Plugin - Kernel Sub-Router
  * 5 endpoints: kernel-variants, kernel-active, kernel-status, kernel-switch, kernel-repair
  */
 

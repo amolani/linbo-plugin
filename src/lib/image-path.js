@@ -1,5 +1,5 @@
 /**
- * LINBO Docker - Image Path Resolution
+ * LINBO Plugin - Image Path Resolution
  * Central module for all image path operations.
  *
  * Production layout: /srv/linbo/images/<base>/<base>.qcow2
