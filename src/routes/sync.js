@@ -13,6 +13,7 @@ const fs = require('fs').promises;
 const path = require('path');
 const syncService = require('../services/sync.service');
 const redis = require('../lib/redis');
+const linboFs = require('../services/linbo-fs.service');
 const { KEY, loadAllHostsFromRedis, loadAllConfigsFromRedis } = syncService;
 
 const LINBO_DIR = process.env.LINBO_DIR || '/srv/linbo';
@@ -204,7 +205,20 @@ router.get('/status', authenticate, async (req, res, next) => {
 router.get('/hosts', authenticate, async (req, res, next) => {
   try {
     const client = redis.getClient();
-    const hosts = await loadAllHostsFromRedis(client);
+    let hosts = await loadAllHostsFromRedis(client);
+
+    // BASE-02: native filesystem fallback when store is empty (no sync has run yet)
+    if (hosts.length === 0) {
+      try {
+        const nativeHosts = await linboFs.readHostsFromDevicesCsv();
+        if (nativeHosts.length > 0) {
+          console.log(`[Sync] /hosts: store empty, falling back to devices.csv (${nativeHosts.length} hosts)`);
+          hosts.push(...nativeHosts);
+        }
+      } catch (err) {
+        console.error('[Sync] /hosts: native fallback failed:', err.message);
+      }
+    }
 
     // Merge runtime status from host:status:{ip} hashes
     const enriched = await Promise.all(hosts.map(async (host) => {
@@ -378,7 +392,21 @@ router.get('/hosts/:mac', authenticate, async (req, res, next) => {
 router.get('/configs', authenticate, async (req, res, next) => {
   try {
     const client = redis.getClient();
-    const configs = await loadAllConfigsFromRedis(client);
+    let configs = await loadAllConfigsFromRedis(client);
+
+    // BASE-02: native filesystem fallback when store is empty
+    if (configs.length === 0) {
+      try {
+        const ids = await linboFs.listNativeStartConfIds();
+        if (ids.length > 0) {
+          console.log(`[Sync] /configs: store empty, falling back to native start.confs (${ids.length} configs)`);
+          configs = ids.map(id => ({ id, content: null, source: 'native-fs', updatedAt: null }));
+        }
+      } catch (err) {
+        console.error('[Sync] /configs: native fallback failed:', err.message);
+      }
+    }
+
     res.json({ data: configs });
   } catch (error) {
     next(error);
