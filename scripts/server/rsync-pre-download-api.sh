@@ -8,7 +8,7 @@
 #
 
 # API configuration
-API_URL="${API_URL:-http://linbo-api:3000/api/v1}"
+API_URL="${API_URL:-http://localhost:3000/api/v1}"
 INTERNAL_API_KEY="${INTERNAL_API_KEY:-linbo-internal-secret}"
 
 # RSYNC environment variables (set by rsyncd)

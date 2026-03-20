@@ -154,6 +154,16 @@ app.get('/health', async (req, res) => {
     health.services.websocket = 'down';
   }
 
+  // Check LINBO filesystem (API-07)
+  const fs = require('fs');
+  try {
+    fs.accessSync('/srv/linbo', fs.constants.R_OK);
+    health.services.linbo = 'up';
+  } catch {
+    health.services.linbo = 'down';
+    health.status = 'degraded';
+  }
+
   const statusCode = health.status === 'healthy' ? 200 : 503;
   res.status(statusCode).json(health);
 });

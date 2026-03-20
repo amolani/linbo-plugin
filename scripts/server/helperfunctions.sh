@@ -10,7 +10,7 @@
 source "$(dirname "$0")/environment.sh" 2>/dev/null || true
 
 # API for host lookups (set by rsync container environment)
-API_URL="${API_URL:-http://linbo-api:3000/api/v1}"
+API_URL="${API_URL:-http://localhost:3000/api/v1}"
 INTERNAL_API_KEY="${INTERNAL_API_KEY:-}"
 
 # converting string to lower chars
