@@ -3,7 +3,7 @@
 /**
  * Tests for startconf-parser — converts INI text into { linbo, partitions, os } object
  */
-const { parseStartConf } = require('../../src/lib/startconf-parser');
+const { parseStartConf } = require('../../../src/lib/startconf-parser');
 
 describe('parseStartConf', () => {
   it('should return { linbo: {}, partitions: [], os: [] } for empty string', () => {

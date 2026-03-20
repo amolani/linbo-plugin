@@ -7,7 +7,7 @@ const path = require('path');
 const fsp = require('fs/promises');
 const os = require('os');
 
-const { readHostsFromDevicesCsv } = require('../../src/lib/devices-csv-reader');
+const { readHostsFromDevicesCsv } = require('../../../src/lib/devices-csv-reader');
 
 describe('readHostsFromDevicesCsv', () => {
   let tmpDir;
