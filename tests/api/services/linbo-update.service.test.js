@@ -36,29 +36,29 @@ const mockRedisClient = {
   status: 'ready',
 };
 
-jest.mock('../../src/lib/redis', () => ({
+jest.mock('../../../src/lib/redis', () => ({
   getClient: () => mockRedisClient,
 }));
 
-jest.mock('../../src/lib/websocket', () => ({
+jest.mock('../../../src/lib/websocket', () => ({
   broadcast: jest.fn(),
   getServer: () => null,
   init: jest.fn(),
 }));
 
 // Mock linbofs service
-jest.mock('../../src/services/linbofs.service', () => ({
+jest.mock('../../../src/services/linbofs.service', () => ({
   updateLinbofs: jest.fn(async () => ({ success: true, output: 'ok', duration: 1000 })),
 }));
 
 // Mock grub service
-jest.mock('../../src/services/grub-generator', () => ({
+jest.mock('../../../src/services/grub-generator', () => ({
   regenerateAll: jest.fn(async () => ({ configs: 3, hosts: 5 })),
 }));
 
-const ws = require('../../src/lib/websocket');
-const linbofsService = require('../../src/services/linbofs.service');
-const grubGenerator = require('../../src/services/grub-generator');
+const ws = require('../../../src/lib/websocket');
+const linbofsService = require('../../../src/services/linbofs.service');
+const grubGenerator = require('../../../src/services/grub-generator');
 
 // ---------------------------------------------------------------------------
 // Setup
@@ -76,7 +76,7 @@ beforeEach(async () => {
   resetRedis();
   jest.clearAllMocks();
   // Reset module state by clearing cached status
-  const svc = require('../../src/services/linbo-update.service');
+  const svc = require('../../../src/services/linbo-update.service');
   await svc._testing.releaseLock();
 });
 
@@ -85,7 +85,7 @@ beforeEach(async () => {
 // ---------------------------------------------------------------------------
 
 describe('parseDebianStanza()', () => {
-  const { parseDebianStanza } = require('../../src/services/linbo-update.service')._testing;
+  const { parseDebianStanza } = require('../../../src/services/linbo-update.service')._testing;
 
   test('parses single stanza correctly', () => {
     const stanza = [
@@ -127,7 +127,7 @@ describe('parseDebianStanza()', () => {
 // ---------------------------------------------------------------------------
 
 describe('parseInstalledVersion()', () => {
-  const { parseInstalledVersion } = require('../../src/services/linbo-update.service')._testing;
+  const { parseInstalledVersion } = require('../../../src/services/linbo-update.service')._testing;
 
   test('parses standard format', () => {
     expect(parseInstalledVersion('LINBO 4.3.29-0: Psycho Killer')).toBe('4.3.29-0');
@@ -151,7 +151,7 @@ describe('parseInstalledVersion()', () => {
 // ---------------------------------------------------------------------------
 
 describe('findBestCandidate()', () => {
-  const { findBestCandidate } = require('../../src/services/linbo-update.service')._testing;
+  const { findBestCandidate } = require('../../../src/services/linbo-update.service')._testing;
 
   test('returns null when no matching package found', async () => {
     const body = [
@@ -211,7 +211,7 @@ describe('findBestCandidate()', () => {
 // ---------------------------------------------------------------------------
 
 describe('isNewer()', () => {
-  const { isNewer } = require('../../src/services/linbo-update.service')._testing;
+  const { isNewer } = require('../../../src/services/linbo-update.service')._testing;
 
   test('returns true when available is newer', async () => {
     // dpkg --compare-versions may not be available in test env
@@ -249,7 +249,7 @@ describe('isNewer()', () => {
 // ---------------------------------------------------------------------------
 
 describe('checkVersion() — installed version', () => {
-  const svc = require('../../src/services/linbo-update.service');
+  const svc = require('../../../src/services/linbo-update.service');
 
   test('reads installed version from linbo-version.txt', async () => {
     await fs.writeFile(
@@ -291,7 +291,7 @@ describe('checkVersion() — installed version', () => {
 // ---------------------------------------------------------------------------
 
 describe('checkVersion() — APT parsing', () => {
-  const svc = require('../../src/services/linbo-update.service');
+  const svc = require('../../../src/services/linbo-update.service');
 
   test('parses APT Packages response', async () => {
     await fs.writeFile(
@@ -353,7 +353,7 @@ describe('checkVersion() — APT parsing', () => {
 // ---------------------------------------------------------------------------
 
 describe('Redis Lock', () => {
-  const svc = require('../../src/services/linbo-update.service');
+  const svc = require('../../../src/services/linbo-update.service');
 
   test('acquireLock succeeds on first call', async () => {
     await svc._testing.acquireLock();
@@ -387,7 +387,7 @@ describe('Redis Lock', () => {
 // ---------------------------------------------------------------------------
 
 describe('getStatus()', () => {
-  const svc = require('../../src/services/linbo-update.service');
+  const svc = require('../../../src/services/linbo-update.service');
 
   test('returns idle when no status in Redis', async () => {
     const status = await svc.getStatus();
@@ -420,7 +420,7 @@ describe('getStatus()', () => {
 // ---------------------------------------------------------------------------
 
 describe('setStatus()', () => {
-  const svc = require('../../src/services/linbo-update.service');
+  const svc = require('../../../src/services/linbo-update.service');
 
   test('writes status to Redis and broadcasts', async () => {
     await svc._testing.setStatus('downloading', {
@@ -452,7 +452,7 @@ describe('setStatus()', () => {
 // ---------------------------------------------------------------------------
 
 describe('cancelUpdate()', () => {
-  const svc = require('../../src/services/linbo-update.service');
+  const svc = require('../../../src/services/linbo-update.service');
 
   test('sets cancelRequested flag', () => {
     // Should not throw
@@ -465,7 +465,7 @@ describe('cancelUpdate()', () => {
 // ---------------------------------------------------------------------------
 
 describe('exists()', () => {
-  const { exists } = require('../../src/services/linbo-update.service')._testing;
+  const { exists } = require('../../../src/services/linbo-update.service')._testing;
 
   test('returns true for existing path', async () => {
     const p = path.join(tmpDir, 'exists-test.txt');
@@ -483,7 +483,7 @@ describe('exists()', () => {
 // ---------------------------------------------------------------------------
 
 describe('sha256File()', () => {
-  const { sha256File } = require('../../src/services/linbo-update.service')._testing;
+  const { sha256File } = require('../../../src/services/linbo-update.service')._testing;
 
   test('computes correct SHA256', async () => {
     const p = path.join(tmpDir, 'sha256-test.txt');
@@ -501,7 +501,7 @@ describe('sha256File()', () => {
 // ---------------------------------------------------------------------------
 
 describe('buildManifest()', () => {
-  const { buildManifest } = require('../../src/services/linbo-update.service')._testing;
+  const { buildManifest } = require('../../../src/services/linbo-update.service')._testing;
 
   test('builds manifest with variant checksums', async () => {
     const kernelsDst = path.join(tmpDir, 'kernels-manifest-test');
@@ -524,7 +524,7 @@ describe('buildManifest()', () => {
 // ---------------------------------------------------------------------------
 
 describe('cleanup()', () => {
-  const { cleanup } = require('../../src/services/linbo-update.service')._testing;
+  const { cleanup } = require('../../../src/services/linbo-update.service')._testing;
 
   test('removes staging directory', async () => {
     const staging = path.join(tmpDir, '.update-staging');
@@ -533,7 +533,7 @@ describe('cleanup()', () => {
 
     await cleanup();
 
-    const { exists } = require('../../src/services/linbo-update.service')._testing;
+    const { exists } = require('../../../src/services/linbo-update.service')._testing;
     expect(await exists(staging)).toBe(false);
   });
 
@@ -546,7 +546,7 @@ describe('cleanup()', () => {
 // ---------------------------------------------------------------------------
 
 describe('startUpdate() — error scenarios', () => {
-  const svc = require('../../src/services/linbo-update.service');
+  const svc = require('../../../src/services/linbo-update.service');
 
   test('throws 400 when no update available', async () => {
     await fs.writeFile(
@@ -621,7 +621,7 @@ describe('startUpdate() — error scenarios', () => {
 // ---------------------------------------------------------------------------
 
 describe('WS events', () => {
-  const svc = require('../../src/services/linbo-update.service');
+  const svc = require('../../../src/services/linbo-update.service');
 
   test('setStatus broadcasts linbo.update.status', async () => {
     await svc._testing.setStatus('done', { version: '4.3.30-0', progress: 100 });
@@ -638,7 +638,7 @@ describe('WS events', () => {
 // ---------------------------------------------------------------------------
 
 describe('mergeGrubFiles()', () => {
-  const { mergeGrubFiles } = require('../../src/services/linbo-update.service')._testing;
+  const { mergeGrubFiles } = require('../../../src/services/linbo-update.service')._testing;
 
   test('copies new files to destination', async () => {
     const src = path.join(tmpDir, 'grub-merge-src');
@@ -710,7 +710,7 @@ describe('mergeGrubFiles()', () => {
 // ---------------------------------------------------------------------------
 
 describe('provisionKernels() — update safety', () => {
-  const { provisionKernels, exists } = require('../../src/services/linbo-update.service')._testing;
+  const { provisionKernels, exists } = require('../../../src/services/linbo-update.service')._testing;
 
   test('stores linbofs64.xz template in kernels dir', async () => {
     // Create mock extract dir structure
@@ -738,7 +738,7 @@ describe('provisionKernels() — update safety', () => {
 // ---------------------------------------------------------------------------
 
 describe('startUpdate() — partial failure', () => {
-  const svc = require('../../src/services/linbo-update.service');
+  const svc = require('../../../src/services/linbo-update.service');
 
   test('rebuild failure error message is correctly wrapped', async () => {
     // The rebuildLinbofs function wraps updateLinbofs failure:
@@ -834,7 +834,7 @@ describe('startUpdate() — partial failure', () => {
 // ---------------------------------------------------------------------------
 
 describe('startUpdate() — concurrent update (409)', () => {
-  const svc = require('../../src/services/linbo-update.service');
+  const svc = require('../../../src/services/linbo-update.service');
 
   test('rejects with 409 when update already in progress', async () => {
     // Pre-set lock to simulate running update
@@ -909,7 +909,7 @@ describe('startUpdate() — concurrent update (409)', () => {
 
 describe('Version comparison edge cases', () => {
   const { isNewer, parseInstalledVersion, findBestCandidate } =
-    require('../../src/services/linbo-update.service')._testing;
+    require('../../../src/services/linbo-update.service')._testing;
 
   test('parseInstalledVersion handles version with tilde', () => {
     expect(parseInstalledVersion('LINBO 4.3.29~rc1-0: Release Candidate')).toBe('4.3.29~rc1-0');

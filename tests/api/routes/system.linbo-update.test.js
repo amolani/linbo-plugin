@@ -37,18 +37,18 @@ const mockRedisClient = {
   ping: jest.fn(async () => 'PONG'),
 };
 
-jest.mock('../../src/lib/redis', () => ({
+jest.mock('../../../src/lib/redis', () => ({
   getClient: () => mockRedisClient,
 }));
 
-jest.mock('../../src/lib/websocket', () => ({
+jest.mock('../../../src/lib/websocket', () => ({
   broadcast: jest.fn(),
   getServer: () => null,
   init: jest.fn(),
 }));
 
 // Mock linbofs service
-jest.mock('../../src/services/linbofs.service', () => ({
+jest.mock('../../../src/services/linbofs.service', () => ({
   updateLinbofs: jest.fn(async () => ({ success: true, output: 'ok', duration: 100 })),
   getLinbofsInfo: jest.fn(async () => ({ exists: true, size: 1000 })),
   verifyLinbofs: jest.fn(async () => ({ valid: true, hasPasswordHash: true, hasAuthorizedKeys: true, hasDropbearKey: true })),
@@ -59,7 +59,7 @@ jest.mock('../../src/services/linbofs.service', () => ({
 }));
 
 // Mock kernel service
-jest.mock('../../src/services/kernel.service', () => ({
+jest.mock('../../../src/services/kernel.service', () => ({
   listKernelVariants: jest.fn(async () => []),
   getActiveKernel: jest.fn(async () => ({ variant: 'stable' })),
   getKernelStatus: jest.fn(async () => ({ rebuildRunning: false })),
@@ -69,21 +69,21 @@ jest.mock('../../src/services/kernel.service', () => ({
 }));
 
 // Mock grub-generator (used by system/grub-config.js sub-router)
-jest.mock('../../src/services/grub-generator', () => ({
+jest.mock('../../../src/services/grub-generator', () => ({
   regenerateAll: jest.fn(async () => ({ configs: 0, hosts: 0, hostcfgMac: 0 })),
 }));
 
-jest.mock('../../src/services/grub-theme.service', () => ({
+jest.mock('../../../src/services/grub-theme.service', () => ({
   getThemeStatus: jest.fn(async () => ({})),
 }));
 
-jest.mock('../../src/services/firmware.service', () => ({
+jest.mock('../../../src/services/firmware.service', () => ({
   getFirmwareEntries: jest.fn(async () => []),
   getFirmwareStatus: jest.fn(async () => ({})),
 }));
 
 // Mock audit middleware
-jest.mock('../../src/middleware/audit', () => ({
+jest.mock('../../../src/middleware/audit', () => ({
   auditAction: () => (req, res, next) => next(),
 }));
 
@@ -111,7 +111,7 @@ const viewerToken = makeToken({ role: 'viewer', username: 'viewer' });
 // ---------------------------------------------------------------------------
 
 const express = require('express');
-const systemRoutes = require('../../src/routes/system');
+const systemRoutes = require('../../../src/routes/system');
 
 let app, server;
 
@@ -172,7 +172,7 @@ afterAll(async () => {
 beforeEach(async () => {
   resetRedis();
   jest.clearAllMocks();
-  const svc = require('../../src/services/linbo-update.service');
+  const svc = require('../../../src/services/linbo-update.service');
   await svc._testing.releaseLock();
 });
 

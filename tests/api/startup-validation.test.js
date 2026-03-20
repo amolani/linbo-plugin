@@ -43,7 +43,7 @@ describe('validateSecrets', () => {
 
   beforeAll(() => {
     // Load validateSecrets from index.js _testing export
-    const index = require('../src/index');
+    const index = require('../../src/index');
     validateSecrets = index._testing.validateSecrets;
   });
 

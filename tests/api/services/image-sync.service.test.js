@@ -40,15 +40,15 @@ const MOCK_MD5_HASH = 'd41d8cd98f00b204e9800998ecf8427e';
 const { createRedisMock } = require('../mocks/redis');
 const mockRedis = createRedisMock();
 
-jest.mock('../../src/lib/redis', () => ({
+jest.mock('../../../src/lib/redis', () => ({
   getClient: () => mockRedis.client,
 }));
 
-jest.mock('../../src/lib/websocket', () => ({
+jest.mock('../../../src/lib/websocket', () => ({
   broadcast: jest.fn(),
 }));
 
-jest.mock('../../src/services/settings.service', () => ({
+jest.mock('../../../src/services/settings.service', () => ({
   get: jest.fn(async (key) =>
     key === 'lmn_api_url' ? 'http://mock-lmn:8001' : 'mock-api-key'
   ),
@@ -56,7 +56,7 @@ jest.mock('../../src/services/settings.service', () => ({
 
 // Mock lmn-api-client so lmnFetch goes through our mock instead of real fetch/JWT
 const mockLmnRequest = jest.fn();
-jest.mock('../../src/lib/lmn-api-client', () => ({
+jest.mock('../../../src/lib/lmn-api-client', () => ({
   request: (...args) => mockLmnRequest(...args),
 }));
 
@@ -103,8 +103,8 @@ jest.mock('stream', () => {
 // Require SUT + mocked modules for assertions
 // ---------------------------------------------------------------------------
 
-const imageSyncService = require('../../src/services/image-sync.service');
-const ws = require('../../src/lib/websocket');
+const imageSyncService = require('../../../src/services/image-sync.service');
+const ws = require('../../../src/lib/websocket');
 const fs = require('fs');
 const fsp = require('fs/promises');
 const { pipeline } = require('stream/promises');

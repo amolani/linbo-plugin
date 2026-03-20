@@ -22,7 +22,7 @@ describe('grub-sync', () => {
 
     // Re-require to pick up new LINBO_DIR
     jest.resetModules();
-    grubSync = require('../../src/services/grub-sync');
+    grubSync = require('../../../src/services/grub-sync');
   });
 
   afterEach(async () => {

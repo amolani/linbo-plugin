@@ -31,8 +31,8 @@ jest.mock('child_process', () => ({
   }),
 }));
 
-const firmwareService = require('../../src/services/firmware.service');
-const firmwareScanner = require('../../src/lib/firmware-scanner');
+const firmwareService = require('../../../src/services/firmware.service');
+const firmwareScanner = require('../../../src/lib/firmware-scanner');
 
 // =============================================================================
 // Helpers

@@ -51,7 +51,7 @@ jest.mock('ssh2', () => ({
   }),
 }));
 
-const sshService = require('../../src/services/ssh.service');
+const sshService = require('../../../src/services/ssh.service');
 
 describe('SSH Service', () => {
   beforeEach(() => {

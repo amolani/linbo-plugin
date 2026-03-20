@@ -10,7 +10,7 @@ const os = require('os');
 const TEST_DIR = path.join(os.tmpdir(), 'linbo-grub-theme-test-' + process.pid);
 process.env.LINBO_DIR = TEST_DIR;
 
-const grubThemeService = require('../../src/services/grub-theme.service');
+const grubThemeService = require('../../../src/services/grub-theme.service');
 
 // Minimal valid 1x1 PNG (68 bytes)
 function createTestPng(width = 36, height = 36) {

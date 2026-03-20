@@ -82,7 +82,7 @@ const {
   listSessions,
   getSession,
   destroyAll,
-} = require('../../src/services/terminal.service');
+} = require('../../../src/services/terminal.service');
 
 describe('Terminal Service', () => {
   beforeEach(() => {

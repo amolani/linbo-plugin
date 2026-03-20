@@ -50,7 +50,7 @@ jest.mock('child_process', () => ({
   }),
 }));
 
-const linbofsService = require('../../src/services/linbofs.service');
+const linbofsService = require('../../../src/services/linbofs.service');
 
 describe('Linbofs Service', () => {
   beforeAll(async () => {

@@ -6,7 +6,7 @@
  */
 
 // Mock websocket
-jest.mock('../../src/lib/websocket', () => ({
+jest.mock('../../../src/lib/websocket', () => ({
   broadcast: jest.fn(),
   getServer: jest.fn(),
 }));
@@ -34,11 +34,11 @@ const mockClient = {
   _reset: () => { store.clear(); sets.clear(); },
 };
 
-jest.mock('../../src/lib/redis', () => ({
+jest.mock('../../../src/lib/redis', () => ({
   getClient: () => mockClient,
 }));
 
-const router = require('../../src/routes/internal');
+const router = require('../../../src/routes/internal');
 const { findHostByIp } = router._testExports;
 
 // =============================================================================

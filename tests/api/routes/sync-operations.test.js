@@ -136,43 +136,43 @@ const mockClient = {
   ping: jest.fn(async () => 'PONG'),
 };
 
-jest.mock('../../src/lib/redis', () => ({
+jest.mock('../../../src/lib/redis', () => ({
   getClient: () => mockClient,
   disconnect: jest.fn(),
   delPattern: jest.fn(),
 }));
 
-jest.mock('../../src/lib/websocket', () => ({
+jest.mock('../../../src/lib/websocket', () => ({
   broadcast: jest.fn(),
   init: jest.fn(),
 }));
 
-jest.mock('../../src/services/ssh.service', () => ({
+jest.mock('../../../src/services/ssh.service', () => ({
   testConnection: jest.fn(),
   executeCommand: jest.fn(),
 }));
 
-jest.mock('../../src/services/wol.service', () => ({
+jest.mock('../../../src/services/wol.service', () => ({
   sendWakeOnLan: jest.fn(),
   sendWakeOnLanBulk: jest.fn(),
 }));
 
-jest.mock('../../src/lib/lmn-api-client', () => ({
+jest.mock('../../../src/lib/lmn-api-client', () => ({
   getChanges: jest.fn(),
 }));
 
-jest.mock('../../src/lib/atomic-write', () => ({
+jest.mock('../../../src/lib/atomic-write', () => ({
   atomicWrite: jest.fn(),
   atomicWriteWithMd5: jest.fn(),
   safeUnlink: jest.fn(),
   forceSymlink: jest.fn(),
 }));
 
-jest.mock('../../src/lib/startconf-rewrite', () => ({
+jest.mock('../../../src/lib/startconf-rewrite', () => ({
   rewriteServerField: jest.fn(c => c),
 }));
 
-jest.mock('../../src/services/grub-generator', () => ({
+jest.mock('../../../src/services/grub-generator', () => ({
   regenerateAll: jest.fn(),
 }));
 
@@ -182,9 +182,9 @@ jest.mock('../../src/services/grub-generator', () => ({
 
 const express = require('express');
 const jwt = require('jsonwebtoken');
-const syncOpsRoute = require('../../src/routes/sync-operations');
-const sshService = require('../../src/services/ssh.service');
-const wolService = require('../../src/services/wol.service');
+const syncOpsRoute = require('../../../src/routes/sync-operations');
+const sshService = require('../../../src/services/ssh.service');
+const wolService = require('../../../src/services/wol.service');
 
 let app, server;
 
@@ -298,7 +298,7 @@ describe('Sync Operations Routes', () => {
       seedHosts();
 
       // Create an operation directly via service
-      const syncOps = require('../../src/services/sync-operations.service');
+      const syncOps = require('../../../src/services/sync-operations.service');
       const hosts = [{ hostname: 'pc01', mac: 'AA:BB:CC:DD:EE:01', ip: '10.0.0.101' }];
       await syncOps.createOperation(hosts, 'reboot');
 
@@ -316,7 +316,7 @@ describe('Sync Operations Routes', () => {
 
     test('returns operation with sessions', async () => {
       seedHosts();
-      const syncOps = require('../../src/services/sync-operations.service');
+      const syncOps = require('../../../src/services/sync-operations.service');
       const hosts = [{ hostname: 'pc01', mac: 'AA:BB:CC:DD:EE:01', ip: '10.0.0.101' }];
       const op = await syncOps.createOperation(hosts, 'reboot');
 
@@ -443,7 +443,7 @@ describe('Sync Operations Routes', () => {
   describe('POST /operations/:id/cancel', () => {
     test('cancels a pending operation', async () => {
       seedHosts();
-      const syncOps = require('../../src/services/sync-operations.service');
+      const syncOps = require('../../../src/services/sync-operations.service');
       const hosts = [{ hostname: 'pc01', mac: 'AA:BB:CC:DD:EE:01', ip: '10.0.0.101' }];
       const op = await syncOps.createOperation(hosts, 'sync:1');
 

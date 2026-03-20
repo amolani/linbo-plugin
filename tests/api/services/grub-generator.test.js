@@ -31,7 +31,7 @@ const {
   regenerateAll,
   generateConfigGrub,
   generateMainGrub,
-} = require('../../src/services/grub-generator');
+} = require('../../../src/services/grub-generator');
 
 // Sample data matching LMN Authority API shapes
 const SAMPLE_CONFIG = {

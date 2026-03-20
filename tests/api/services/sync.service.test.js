@@ -11,7 +11,7 @@ process.env.LINBO_DIR = tmpDir;
 process.env.LINBO_SERVER_IP = '10.0.0.13';
 
 // Mock dependencies
-jest.mock('../../src/lib/redis', () => {
+jest.mock('../../../src/lib/redis', () => {
   const store = new Map();
   const sets = new Map();
   const mockClient = {
@@ -51,7 +51,7 @@ jest.mock('../../src/lib/redis', () => {
   };
 });
 
-jest.mock('../../src/lib/lmn-api-client', () => ({
+jest.mock('../../../src/lib/lmn-api-client', () => ({
   getChanges: jest.fn(),
   batchGetHosts: jest.fn(),
   batchGetStartConfs: jest.fn(),
@@ -62,26 +62,26 @@ jest.mock('../../src/lib/lmn-api-client', () => ({
   checkHealth: jest.fn(),
 }));
 
-jest.mock('../../src/lib/websocket', () => ({
+jest.mock('../../../src/lib/websocket', () => ({
   broadcast: jest.fn(),
   getServer: jest.fn(),
 }));
 
-jest.mock('../../src/services/grub-generator', () => ({
+jest.mock('../../../src/services/grub-generator', () => ({
   regenerateAll: jest.fn(async () => ({ configs: 1, hosts: 2, hostcfgMac: 2 })),
 }));
 
-jest.mock('../../src/services/grub-sync', () => ({
+jest.mock('../../../src/services/grub-sync', () => ({
   writeGrubConfigs: jest.fn(async () => {}),
   writeHostcfgSymlinks: jest.fn(async () => {}),
 }));
 
-const redis = require('../../src/lib/redis');
-const lmnClient = require('../../src/lib/lmn-api-client');
-const grubGenerator = require('../../src/services/grub-generator');
-const grubSync = require('../../src/services/grub-sync');
-const settingsService = require('../../src/services/settings.service');
-const { syncOnce, getSyncStatus, resetSync, KEY } = require('../../src/services/sync.service');
+const redis = require('../../../src/lib/redis');
+const lmnClient = require('../../../src/lib/lmn-api-client');
+const grubGenerator = require('../../../src/services/grub-generator');
+const grubSync = require('../../../src/services/grub-sync');
+const settingsService = require('../../../src/services/settings.service');
+const { syncOnce, getSyncStatus, resetSync, KEY } = require('../../../src/services/sync.service');
 
 beforeAll(async () => {
   await fsp.mkdir(tmpDir, { recursive: true });

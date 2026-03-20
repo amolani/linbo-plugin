@@ -68,13 +68,13 @@ function resetRedis() {
   redisHashes.clear();
 }
 
-jest.mock('../../src/lib/redis', () => ({
+jest.mock('../../../src/lib/redis', () => ({
   getClient: () => mockClient,
   disconnect: jest.fn(),
   delPattern: jest.fn(),
 }));
 
-jest.mock('../../src/lib/lmn-api-client', () => ({
+jest.mock('../../../src/lib/lmn-api-client', () => ({
   getChanges: jest.fn(),
   batchGetHosts: jest.fn(),
   batchGetStartConfs: jest.fn(),
@@ -83,12 +83,12 @@ jest.mock('../../src/lib/lmn-api-client', () => ({
   checkHealth: jest.fn(async () => ({ healthy: true })),
 }));
 
-jest.mock('../../src/lib/websocket', () => ({
+jest.mock('../../../src/lib/websocket', () => ({
   broadcast: jest.fn(),
   getServer: jest.fn(),
 }));
 
-jest.mock('../../src/services/grub-generator', () => ({
+jest.mock('../../../src/services/grub-generator', () => ({
   regenerateAll: jest.fn(async () => ({})),
 }));
 
@@ -97,7 +97,7 @@ jest.mock('../../src/services/grub-generator', () => ({
 // ---------------------------------------------------------------------------
 const express = require('express');
 const jwt = require('jsonwebtoken');
-const syncRoutes = require('../../src/routes/sync');
+const syncRoutes = require('../../../src/routes/sync');
 
 let app, server;
 

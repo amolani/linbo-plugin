@@ -21,23 +21,23 @@ const mockClient = {
   status: 'ready',
 };
 
-jest.mock('../../src/lib/redis', () => ({
+jest.mock('../../../src/lib/redis', () => ({
   getClient: () => mockClient,
 }));
 
-jest.mock('../../src/lib/websocket', () => ({
+jest.mock('../../../src/lib/websocket', () => ({
   broadcast: jest.fn(),
   getServer: () => null,
   init: jest.fn(),
 }));
 
 const mockSyncOnce = jest.fn().mockResolvedValue({ success: true });
-jest.mock('../../src/services/sync.service', () => ({
+jest.mock('../../../src/services/sync.service', () => ({
   syncOnce: mockSyncOnce,
 }));
 
-const ws = require('../../src/lib/websocket');
-const settings = require('../../src/services/settings.service');
+const ws = require('../../../src/lib/websocket');
+const settings = require('../../../src/services/settings.service');
 
 beforeEach(() => {
   resetRedis();

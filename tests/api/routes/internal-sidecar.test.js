@@ -14,12 +14,12 @@ process.env.LINBO_DIR = TEST_LINBO_DIR;
 process.env.IMAGES_DIR = TEST_IMAGES_DIR;
 
 // Mock websocket
-jest.mock('../../src/lib/websocket', () => ({
+jest.mock('../../../src/lib/websocket', () => ({
   broadcast: jest.fn(),
 }));
 
 // Mock redis (imported at module level by internal.js, but not used in these tests)
-jest.mock('../../src/lib/redis', () => ({
+jest.mock('../../../src/lib/redis', () => ({
   getClient: jest.fn(() => ({
     smembers: jest.fn().mockResolvedValue([]),
     get: jest.fn().mockResolvedValue(null),
@@ -28,7 +28,7 @@ jest.mock('../../src/lib/redis', () => ({
   })),
 }));
 
-const router = require('../../src/routes/internal');
+const router = require('../../../src/routes/internal');
 const { parseInfoTimestamp, shouldWarnSidecarBeforeImage, sidecarWarnCache } = router._testExports;
 
 describe('Internal Sidecar Handling', () => {
@@ -142,7 +142,7 @@ describe('Internal Sidecar Handling', () => {
   // parseSidecarFilename integration (via image-path)
   // ===========================================================================
   describe('parseSidecarFilename integration', () => {
-    const { parseSidecarFilename } = require('../../src/lib/image-path');
+    const { parseSidecarFilename } = require('../../../src/lib/image-path');
 
     test('all sidecar extensions detected', () => {
       const sidecars = ['.info', '.desc', '.torrent', '.macct', '.md5'];

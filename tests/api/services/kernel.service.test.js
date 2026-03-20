@@ -34,7 +34,7 @@ jest.mock('child_process', () => ({
   }),
 }));
 
-const kernelService = require('../../src/services/kernel.service');
+const kernelService = require('../../../src/services/kernel.service');
 
 // =============================================================================
 // Helpers

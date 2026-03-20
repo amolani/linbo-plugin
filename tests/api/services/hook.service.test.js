@@ -13,7 +13,7 @@ const HOOKS_DIR = path.join(TEST_DIR, 'hooks');
 process.env.LINBO_DIR = TEST_DIR;
 process.env.HOOKSDIR = HOOKS_DIR;
 
-const hookService = require('../../src/services/hook.service');
+const hookService = require('../../../src/services/hook.service');
 
 describe('Hook Service', () => {
   beforeAll(async () => {

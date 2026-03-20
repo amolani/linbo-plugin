@@ -31,7 +31,7 @@ jest.mock('child_process', () => ({
   }),
 }));
 
-const catalog = require('../../src/lib/firmware-catalog');
+const catalog = require('../../../src/lib/firmware-catalog');
 
 // =============================================================================
 // Setup / Teardown

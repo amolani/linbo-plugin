@@ -26,13 +26,13 @@ process.env.LINBO_DIR = TEST_BASE;
 // Mocks
 // ---------------------------------------------------------------------------
 
-jest.mock('../../src/services/ssh.service', () => ({
+jest.mock('../../../src/services/ssh.service', () => ({
   executeWithTimeout: jest.fn(),
   executeCommand: jest.fn(),
   testConnection: jest.fn(),
 }));
 
-jest.mock('../../src/lib/websocket', () => ({
+jest.mock('../../../src/lib/websocket', () => ({
   broadcast: jest.fn(),
 }));
 
@@ -40,9 +40,9 @@ jest.mock('../../src/lib/websocket', () => ({
 // Imports (after env setup)
 // ---------------------------------------------------------------------------
 
-const driversService = require('../../src/services/drivers.service');
-const sshService = require('../../src/services/ssh.service');
-const ws = require('../../src/lib/websocket');
+const driversService = require('../../../src/services/drivers.service');
+const sshService = require('../../../src/services/ssh.service');
+const ws = require('../../../src/lib/websocket');
 
 // ---------------------------------------------------------------------------
 // Setup / Teardown

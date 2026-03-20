@@ -6,7 +6,7 @@
 // Mock http module for Networkbox tests -- must be before require
 jest.mock('http');
 
-const wolService = require('../../src/services/wol.service');
+const wolService = require('../../../src/services/wol.service');
 
 /**
  * Helper: set up a mock http.request that returns a mock request/response pair.

@@ -148,7 +148,7 @@ async function syncOnce() {
     let hostsToSync = delta.hostsChanged;
     if (Array.isArray(hostsToSync) && hostsToSync.includes('all')) {
       console.log('[Sync] hostsChanged contains "all" — fetching full host list');
-      const fullDelta = await lmnClient.getChanges('');
+      const fullDelta = await lmnClient.getChanges('', school);
       hostsToSync = Array.isArray(fullDelta.hostsChanged)
         ? fullDelta.hostsChanged.filter(m => m !== 'all')
         : [];

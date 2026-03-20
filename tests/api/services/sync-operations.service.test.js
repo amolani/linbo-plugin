@@ -164,50 +164,50 @@ const mockClient = {
   ping: jest.fn(async () => 'PONG'),
 };
 
-jest.mock('../../src/lib/redis', () => ({
+jest.mock('../../../src/lib/redis', () => ({
   getClient: () => mockClient,
   disconnect: jest.fn(),
 }));
 
-jest.mock('../../src/lib/websocket', () => ({
+jest.mock('../../../src/lib/websocket', () => ({
   broadcast: jest.fn(),
 }));
 
-jest.mock('../../src/services/ssh.service', () => ({
+jest.mock('../../../src/services/ssh.service', () => ({
   testConnection: jest.fn(),
   executeCommand: jest.fn(),
 }));
 
-jest.mock('../../src/services/wol.service', () => ({
+jest.mock('../../../src/services/wol.service', () => ({
   sendWakeOnLan: jest.fn(),
   sendWakeOnLanBulk: jest.fn(),
 }));
 
 // Must mock lmn-api-client (required by sync.service)
-jest.mock('../../src/lib/lmn-api-client', () => ({
+jest.mock('../../../src/lib/lmn-api-client', () => ({
   getChanges: jest.fn(),
 }));
 
 // Must mock atomic-write (required by sync.service)
-jest.mock('../../src/lib/atomic-write', () => ({
+jest.mock('../../../src/lib/atomic-write', () => ({
   atomicWrite: jest.fn(),
   atomicWriteWithMd5: jest.fn(),
   safeUnlink: jest.fn(),
   forceSymlink: jest.fn(),
 }));
 
-jest.mock('../../src/lib/startconf-rewrite', () => ({
+jest.mock('../../../src/lib/startconf-rewrite', () => ({
   rewriteServerField: jest.fn(c => c),
 }));
 
-jest.mock('../../src/services/grub-generator', () => ({
+jest.mock('../../../src/services/grub-generator', () => ({
   regenerateAll: jest.fn(),
 }));
 
-const syncOps = require('../../src/services/sync-operations.service');
-const sshService = require('../../src/services/ssh.service');
-const wolService = require('../../src/services/wol.service');
-const ws = require('../../src/lib/websocket');
+const syncOps = require('../../../src/services/sync-operations.service');
+const sshService = require('../../../src/services/ssh.service');
+const wolService = require('../../../src/services/wol.service');
+const ws = require('../../../src/lib/websocket');
 
 // ---------------------------------------------------------------------------
 // Test Data

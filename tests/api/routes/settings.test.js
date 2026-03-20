@@ -30,11 +30,11 @@ const mockClient = {
   ping: jest.fn(async () => 'PONG'),
 };
 
-jest.mock('../../src/lib/redis', () => ({
+jest.mock('../../../src/lib/redis', () => ({
   getClient: () => mockClient,
 }));
 
-jest.mock('../../src/lib/websocket', () => ({
+jest.mock('../../../src/lib/websocket', () => ({
   broadcast: jest.fn(),
   getServer: () => null,
   init: jest.fn(),
@@ -67,8 +67,8 @@ function userToken() {
 // ---------------------------------------------------------------------------
 
 const express = require('express');
-const settingsRoutes = require('../../src/routes/settings');
-const settingsService = require('../../src/services/settings.service');
+const settingsRoutes = require('../../../src/routes/settings');
+const settingsService = require('../../../src/services/settings.service');
 
 let app, server, baseUrl;
 

@@ -3,16 +3,16 @@
  * Verifies GET /hooks endpoint is wired correctly
  */
 
-jest.mock('../../src/services/hook.service');
-jest.mock('../../src/middleware/auth', () => ({
+jest.mock('../../../src/services/hook.service');
+jest.mock('../../../src/middleware/auth', () => ({
   authenticateToken: (req, res, next) => next(),
   requireRole: () => (req, res, next) => next(),
 }));
 
 const express = require('express');
 const request = require('supertest');
-const hookService = require('../../src/services/hook.service');
-const hooksRoute = require('../../src/routes/system/hooks');
+const hookService = require('../../../src/services/hook.service');
+const hooksRoute = require('../../../src/routes/system/hooks');
 
 describe('GET /hooks', () => {
   let app;
