@@ -31,7 +31,7 @@
 
 ### Caching-Satellit
 
-- [ ] **CACHE-01**: Multi-School Sync — school-Parameter durchgaengig, bis zu 40 Schulen
+- [x] **CACHE-01**: Multi-School Sync — school-Parameter durchgaengig, bis zu 40 Schulen
 - [ ] **CACHE-02**: Image Caching — Images lokal vorhalten, rsync-Download von Authority Server
 - [ ] **CACHE-03**: Auto-Discovery — automatische Erkennung neuer Clients im Netz
 - [ ] **CACHE-04**: First-Boot Sync — automatischer erster Sync bei neuem Client
@@ -95,7 +95,7 @@
 | DHCP-01 | Phase 3 | Complete |
 | DHCP-02 | Phase 3 | Complete |
 | DHCP-03 | Phase 3 | Complete |
-| CACHE-01 | Phase 7 | Pending |
+| CACHE-01 | Phase 7 | Complete |
 | CACHE-02 | Phase 7 | Pending |
 | CACHE-03 | Phase 7 | Pending |
 | CACHE-04 | Phase 7 | Pending |
