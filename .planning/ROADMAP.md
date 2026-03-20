@@ -152,7 +152,11 @@ Plans:
   2. Opening http://[server-ip]/ in a browser loads the React app and the login page appears
   3. The browser WebSocket connection to /ws stays connected and delivers real-time events without disconnecting
   4. All API calls via the browser (through the nginx reverse proxy) return correct responses — no CORS errors, no 502s
-**Plans**: TBD
+**Plans**: 2 plans
+
+Plans:
+- [ ] 08-01-PLAN.md — Fix nginx.conf root directive + write deploy-frontend.sh
+- [ ] 08-02-PLAN.md — Deploy dist/ to 10.40.0.10 + human browser verification
 
 ### Phase 9: Docker Artifact Removal
 **Goal**: The repository contains no Docker-specific files, no container directory nesting, and no dead code — only the native service stack remains
@@ -190,6 +194,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 5. Dependency Cleanup | 3/3 | Complete | 2026-03-20 |
 | 6. Native LINBO File Access | 2/2 | Complete | 2026-03-20 |
 | 7. Caching-Satellite Features | 3/3 | Complete | 2026-03-20 |
-| 8. Frontend Build + nginx | 0/? | Not started | - |
+| 8. Frontend Build + nginx | 0/2 | In progress | - |
 | 9. Docker Artifact Removal | 0/? | Not started | - |
 | 10. End-to-End Verification | 0/? | Not started | - |
