@@ -178,7 +178,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 2. systemd Units + Boot Scaffold | 3/3 | Complete | 2026-03-19 |
 | 3. DHCP + PXE Boot | 3/3 | Complete | 2026-03-20 |
 | 4. API Filesystem Migration | 3/3 | Complete | 2026-03-20 |
-| 5. Dependency Cleanup | 0/3 | Not started | - |
+| 5. Dependency Cleanup | 3/3 | Complete | 2026-03-20 |
 | 6. Native LINBO File Access | 0/? | Not started | - |
 | 7. Caching-Satellite Features | 0/? | Not started | - |
 | 8. Frontend Build + nginx | 0/? | Not started | - |

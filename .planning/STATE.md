@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: in-progress
-stopped_at: Completed 05-02-PLAN.md
-last_updated: "2026-03-20T12:23:00Z"
-last_activity: "2026-03-20 — Completed 05-02: GREEN implementation for containerLogs + health + hostname cleanup"
+status: completed
+stopped_at: Completed 05-03-PLAN.md
+last_updated: "2026-03-20T13:21:11.576Z"
+last_activity: "2026-03-20 -- Completed 05-03: removed ioredis, dockerode, rate-limit-redis from package.json"
 progress:
   total_phases: 10
-  completed_phases: 4
+  completed_phases: 5
   total_plans: 14
-  completed_plans: 13
-  percent: 93
+  completed_plans: 14
+  percent: 100
 ---
 
 # Project State
@@ -21,23 +21,23 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-19)
 
 **Core value:** Vanilla LINBO unberuehrt lassen, alles ueber eigene API-Schicht ansprechen — vollwertiger Caching-Satellit
-**Current focus:** Phase 5 in progress. GREEN implementation complete -- containerLogs uses journald, Docker hostnames replaced, health checks /srv/linbo.
+**Current focus:** Phase 5 COMPLETE. All dead Docker/Redis dependencies removed. Ready for Phase 6: Native LINBO File Access.
 
 ## Current Position
 
-Phase: 5 of 10 (Dependency Cleanup)
-Plan: 2 of 3 in current phase (2 complete)
-Status: Plan 02 complete — GREEN implementation done, containerLogs rewritten with journald, Docker hostnames removed
-Last activity: 2026-03-20 — Completed 05-02: GREEN implementation for containerLogs + health + hostname cleanup
+Phase: 5 of 10 (Dependency Cleanup) -- COMPLETE
+Plan: 3 of 3 in current phase (3 complete)
+Status: Phase 5 complete -- all dead Docker/Redis dependencies removed, 43 packages eliminated
+Last activity: 2026-03-20 -- Completed 05-03: removed ioredis, dockerode, rate-limit-redis from package.json
 
-Progress: [█████████░] 93%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 13
-- Average duration: 5.7 min
-- Total execution time: 1.28 hours
+- Total plans completed: 14
+- Average duration: 5.6 min
+- Total execution time: 1.33 hours
 
 **By Phase:**
 
@@ -47,17 +47,18 @@ Progress: [█████████░] 93%
 | 2. systemd Units + Boot Scaffold | 3/3 | 20 min | 6.7 min |
 | 3. DHCP + PXE Boot | 3/3 | 9 min | 3.0 min |
 | 4. API Filesystem Migration | 3/3 | 20 min | 6.7 min |
-| 5. Dependency Cleanup | 2/3 | 28 min | 14.0 min |
+| 5. Dependency Cleanup | 3/3 | 33 min | 11.0 min |
 
 **Recent Trend:**
-- Last 5 plans: 04-01 (4 min), 04-02 (6 min), 04-03 (10 min), 05-01 (17 min), 05-02 (11 min)
-- Trend: Phase 5 GREEN implementation done, Plan 03 (package removal) remaining
+- Last 5 plans: 04-02 (6 min), 04-03 (10 min), 05-01 (17 min), 05-02 (11 min), 05-03 (5 min)
+- Trend: Phase 5 COMPLETE. Ready for Phase 6 (Native LINBO File Access)
 
 *Updated after each plan completion*
 | Phase 04 P02 | 6 min | 1 tasks | 1 files |
 | Phase 04 P03 | 10 min | 3 tasks | 4 files |
 | Phase 05 P01 | 17 min | 2 tasks | 2 files |
 | Phase 05 P02 | 11 min | 2 tasks | 7 files |
+| Phase 05 P03 | 5min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -114,6 +115,7 @@ Recent decisions affecting current work:
 - [Phase 05-02]: Full journald replacement (not stub/disable) for containerLogs.js -- preserves log streaming capability on native server
 - [Phase 05-02]: isAvailable() checks /usr/bin/journalctl existence -- returns true on servers with systemd, false in CI/containers
 - [Phase 05-02]: fs.accessSync for /srv/linbo health check -- synchronous is fine for single stat call in health endpoint
+- [Phase 05]: npm uninstall for atomic removal of ioredis+dockerode+rate-limit-redis; 43 packages eliminated
 
 ### Pending Todos
 
@@ -128,6 +130,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-20T12:23:00Z
-Stopped at: Completed 05-02-PLAN.md
+Last session: 2026-03-20T13:21:11.570Z
+Stopped at: Completed 05-03-PLAN.md
 Resume file: None
