@@ -287,8 +287,9 @@ async function switchKernel(variant) {
   });
 
   // Trigger rebuild asynchronously
-  triggerRebuild(variant, jobId).catch(() => {
-    // Error handling is in triggerRebuild
+  triggerRebuild(variant, jobId).catch(async (err) => {
+    console.error(`[Kernel] Rebuild failed for ${variant}:`, err.message);
+    await writeKernelState({ rebuildStatus: 'failed', lastError: err.message }).catch(() => {});
   });
 
   return { jobId, startedAt, requestedVariant: variant };

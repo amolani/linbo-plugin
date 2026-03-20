@@ -112,12 +112,13 @@ async function executeCommand(host, command, options = {}) {
           resolve({ stdout, stderr, code });
         });
 
+        const MAX_OUTPUT = 10 * 1024 * 1024; // 10MB safety limit
         stream.on('data', (data) => {
-          stdout += data.toString();
+          if (stdout.length < MAX_OUTPUT) stdout += data.toString();
         });
 
         stream.stderr.on('data', (data) => {
-          stderr += data.toString();
+          if (stderr.length < MAX_OUTPUT) stderr += data.toString();
         });
       });
     });
@@ -178,12 +179,37 @@ async function executeCommands(host, commands, options = {}) {
  * @param {object} options - SSH connection options
  */
 async function executeWithTimeout(host, command, timeout = 30000, options = {}) {
-  return Promise.race([
-    executeCommand(host, command, options),
-    new Promise((_, reject) =>
-      setTimeout(() => reject(new Error('Command timeout')), timeout)
-    ),
-  ]);
+  const config = getConfig(host, options);
+  const conn = new Client();
+  let timedOut = false;
+
+  const timeoutHandle = setTimeout(() => {
+    timedOut = true;
+    try { conn.end(); } catch {}
+  }, timeout);
+
+  try {
+    const result = await new Promise((resolve, reject) => {
+      let stdout = '';
+      let stderr = '';
+      conn.on('ready', () => {
+        conn.exec(command, (err, stream) => {
+          if (err) { conn.end(); return reject(err); }
+          stream.on('close', (code) => { conn.end(); resolve({ stdout, stderr, code }); });
+          stream.on('data', (data) => { stdout += data.toString(); });
+          stream.stderr.on('data', (data) => { stderr += data.toString(); });
+        });
+      });
+      conn.on('error', (err) => reject(err));
+      conn.connect(config);
+    });
+    clearTimeout(timeoutHandle);
+    return result;
+  } catch (err) {
+    clearTimeout(timeoutHandle);
+    if (timedOut) throw new Error('Command timeout');
+    throw err;
+  }
 }
 
 /**

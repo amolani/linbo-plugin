@@ -22,9 +22,12 @@ async function atomicWrite(filepath, content) {
   try {
     await fd.writeFile(content);
     await fd.datasync();
-  } finally {
+  } catch (err) {
     await fd.close();
+    await fsp.unlink(tmp).catch(() => {}); // Clean up tmp on write failure (e.g. ENOSPC)
+    throw err;
   }
+  await fd.close();
 
   await fsp.rename(tmp, filepath);
 

@@ -116,11 +116,16 @@ async function syncOnce() {
     throw new Error('Sync already in progress');
   }
 
-  await client.set(KEY.IS_RUNNING, 'true');
+  await client.set(KEY.IS_RUNNING, 'true', 'EX', 60); // 60s TTL — auto-recovery if sync crashes
   const startTime = Date.now();
 
+  // Heartbeat: refresh lock TTL every 20s while sync is running
+  const heartbeat = setInterval(() => {
+    client.expire(KEY.IS_RUNNING, 60).catch(() => {});
+  }, 20000);
+
   // Broadcast sync started
-  try { ws.broadcast('sync.started', { timestamp: new Date().toISOString() }); } catch {} // WS broadcast: no clients is normal
+  try { ws.broadcast('sync.started', { timestamp: new Date().toISOString() }); } catch (err) { console.debug('[Sync] broadcast failed:', err.message); }
 
   try {
     // 1. Read cursor (empty = full snapshot)
@@ -164,7 +169,7 @@ async function syncOnce() {
         stats.startConfs++;
       }
       console.log(`[Sync] Wrote ${stats.startConfs} start.conf files`);
-      try { ws.broadcast('sync.progress', { phase: 'startConfs', stats: { startConfs: stats.startConfs } }); } catch {} // WS broadcast: no clients is normal
+      try { ws.broadcast('sync.progress', { phase: 'startConfs', stats: { startConfs: stats.startConfs } }); } catch (err) { console.debug('[Sync] broadcast failed:', err.message); }
     }
 
     // 4. Sync configs (parsed, cached in Redis for GRUB generator)
@@ -245,7 +250,7 @@ async function syncOnce() {
         stats.hosts++;
       }
       console.log(`[Sync] Cached ${stats.hosts} host records + symlinks`);
-      try { ws.broadcast('sync.progress', { phase: 'hosts', stats: { hosts: stats.hosts } }); } catch {} // WS broadcast: no clients is normal
+      try { ws.broadcast('sync.progress', { phase: 'hosts', stats: { hosts: stats.hosts } }); } catch (err) { console.debug('[Sync] broadcast failed:', err.message); }
 
       // Write devices.csv in LMN standard path (/etc/linuxmuster/sophomorix/{school}/devices.csv)
       await writeDevicesCsv(client, school, hosts);
@@ -387,16 +392,17 @@ async function syncOnce() {
     console.log(`[Sync] Completed in ${elapsed}ms: ${JSON.stringify(stats)}`);
 
     // Broadcast completion event
-    try { ws.broadcast('sync.completed', { stats, elapsed, cursor: delta.nextCursor }); } catch {} // WS broadcast: no clients is normal
+    try { ws.broadcast('sync.completed', { stats, elapsed, cursor: delta.nextCursor }); } catch (err) { console.debug('[Sync] broadcast failed:', err.message); }
 
     return { success: true, stats };
   } catch (err) {
     console.error('[Sync] Failed:', err.message);
     await client.set(KEY.LAST_ERROR, err.message);
     // Do NOT update cursor on failure — next trigger retries
-    try { ws.broadcast('sync.failed', { error: err.message }); } catch {} // WS broadcast: no clients is normal
+    try { ws.broadcast('sync.failed', { error: err.message }); } catch (err) { console.debug('[Sync] broadcast failed:', err.message); }
     throw err;
   } finally {
+    clearInterval(heartbeat);
     await client.set(KEY.IS_RUNNING, 'false');
   }
 }

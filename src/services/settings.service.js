@@ -135,7 +135,7 @@ async function set(key, value) {
   invalidateCache(key);
 
   // Broadcast change
-  try { ws.broadcast('settings.changed', { key }); } catch {} // WS broadcast: no clients is normal
+  try { ws.broadcast('settings.changed', { key }); } catch (err) { console.debug('[Settings] broadcast failed:', err.message); }
 
   // Special: sync_interval → restart timer
   if (key === 'sync_interval') {
@@ -155,7 +155,7 @@ async function reset(key) {
   await client.del(redisKey(key));
   invalidateCache(key);
 
-  try { ws.broadcast('settings.changed', { key }); } catch {} // WS broadcast: no clients is normal
+  try { ws.broadcast('settings.changed', { key }); } catch (err) { console.debug('[Settings] broadcast failed:', err.message); }
 
   if (key === 'sync_interval') {
     await applySyncInterval();

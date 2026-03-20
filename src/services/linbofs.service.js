@@ -151,8 +151,11 @@ async function updateLinbofsStream(onData, onError, options = {}) {
       if (onData) onData(data.toString());
     });
 
+    const MAX_LOG = 2 * 1024 * 1024; // 2MB safety limit
+    let stderrLen = 0;
     child.stderr.on('data', (data) => {
-      if (onError) onError(data.toString());
+      stderrLen += data.length;
+      if (stderrLen <= MAX_LOG && onError) onError(data.toString());
     });
 
     child.on('close', (code) => {

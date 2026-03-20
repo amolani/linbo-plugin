@@ -10,10 +10,9 @@
 // Set MAX_SESSIONS low before module loads (reads env at require-time)
 process.env.TERMINAL_MAX_SESSIONS = '2';
 
-// Mock fs BEFORE requiring terminal.service (module loads key at require-time)
-jest.mock('fs', () => ({
-  readFileSync: jest.fn(() => Buffer.from('mock-ssh-key')),
-  existsSync: jest.fn(() => true),
+// Mock fs/promises BEFORE requiring terminal.service (module loads key lazily via async readFile)
+jest.mock('fs/promises', () => ({
+  readFile: jest.fn(() => Promise.resolve(Buffer.from('mock-ssh-key'))),
 }));
 
 // Mock uuid with predictable counter (prefixed with 'mock' for Jest hoisting)
@@ -237,14 +236,15 @@ describe('Terminal Service', () => {
       const onClose = jest.fn();
 
       // Create session - the ssh2 mock uses setTimeout(fn, 0) for 'ready'
+      // Use async variant to flush microtasks (getClientKey() is async)
       const sessionPromise = createTestSession({ onClose });
-      jest.advanceTimersByTime(1); // Trigger the 'ready' event
+      await jest.advanceTimersByTimeAsync(1); // Flush microtasks + trigger 'ready'
       const sessionId = await sessionPromise;
 
       expect(getSession(sessionId)).not.toBeNull();
 
       // Advance past the idle timeout (30 minutes)
-      jest.advanceTimersByTime(30 * 60 * 1000);
+      await jest.advanceTimersByTimeAsync(30 * 60 * 1000);
 
       expect(getSession(sessionId)).toBeNull();
       expect(onClose).toHaveBeenCalled();

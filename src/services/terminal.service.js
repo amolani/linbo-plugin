@@ -7,24 +7,24 @@
  */
 
 const { Client } = require('ssh2');
-const fs = require('fs');
+const fsp = require('fs/promises');
 const { v4: uuidv4 } = require('uuid');
 
-// SSH config for direct LINBO client connections (not via SSH container)
-// Key is loaded lazily to avoid race condition with SSH container key generation
+// SSH config for direct LINBO client connections
+// Key is loaded lazily to avoid race condition with key provisioning
 let linboClientKey = null;
 const linboKeyPath = process.env.LINBO_CLIENT_SSH_KEY || '/etc/linuxmuster/linbo/ssh_host_rsa_key_client';
 const fallbackKeyPath = process.env.SSH_PRIVATE_KEY;
 
-function getClientKey() {
+async function getClientKey() {
   if (linboClientKey) return linboClientKey;
   try {
-    linboClientKey = fs.readFileSync(linboKeyPath);
+    linboClientKey = await fsp.readFile(linboKeyPath);
     console.log(`[Terminal] Loaded LINBO client key from ${linboKeyPath}`);
   } catch {
     if (fallbackKeyPath) {
       try {
-        linboClientKey = fs.readFileSync(fallbackKeyPath);
+        linboClientKey = await fsp.readFile(fallbackKeyPath);
         console.warn(`[Terminal] Using fallback key ${fallbackKeyPath} — may not work for LINBO clients`);
       } catch {}
     }
@@ -35,7 +35,6 @@ function getClientKey() {
 const sshDefaults = {
   port: parseInt(process.env.LINBO_CLIENT_SSH_PORT, 10) || 2222,
   username: 'root',
-  get privateKey() { return getClientKey(); },
   readyTimeout: parseInt(process.env.SSH_TIMEOUT, 10) || 10000,
   keepaliveInterval: 5000,
 };
@@ -126,10 +125,13 @@ function createSession(hostIp, userId, { cols = 80, rows = 24, onData, onClose, 
       reject(err);
     });
 
-    client.connect({
-      ...sshDefaults,
-      host: hostIp,
-    });
+    getClientKey().then(privateKey => {
+      client.connect({
+        ...sshDefaults,
+        privateKey,
+        host: hostIp,
+      });
+    }).catch(reject);
   });
 }
 
