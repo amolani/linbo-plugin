@@ -13,7 +13,7 @@ const { v4: uuidv4 } = require('uuid');
 // SSH config for direct LINBO client connections (not via SSH container)
 // Key is loaded lazily to avoid race condition with SSH container key generation
 let linboClientKey = null;
-const linboKeyPath = process.env.LINBO_CLIENT_SSH_KEY || '/etc/linuxmuster/linbo/linbo_client_key';
+const linboKeyPath = process.env.LINBO_CLIENT_SSH_KEY || '/etc/linuxmuster/linbo/ssh_host_rsa_key_client';
 const fallbackKeyPath = process.env.SSH_PRIVATE_KEY;
 
 function getClientKey() {

@@ -13,7 +13,7 @@ const fs = require('fs');
 /**
  * SSH key paths — resolved from environment or defaults.
  */
-const linboKeyPath = process.env.LINBO_CLIENT_SSH_KEY || '/etc/linuxmuster/linbo/linbo_client_key';
+const linboKeyPath = process.env.LINBO_CLIENT_SSH_KEY || '/etc/linuxmuster/linbo/ssh_host_rsa_key_client';
 
 /**
  * Cached private key. Sentinel values:
@@ -59,7 +59,7 @@ function getPrivateKey() {
 
   // No key available
   throw new Error(
-    `SSH private key not available. Ensure setup.sh has been run and linbo_client_key exists. Expected: ${linboKeyPath}`
+    `SSH private key not available. Ensure setup.sh has been run and /etc/linuxmuster/linbo/ssh_host_rsa_key_client is readable by linbo user. Expected: ${linboKeyPath}`
   );
 }
 

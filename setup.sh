@@ -423,23 +423,22 @@ create_linbo_user() {
 }
 
 # =============================================================================
-# SSH Key: provision /etc/linuxmuster/linbo/linbo_client_key for API access
+# SSH Key: ensure /root/.ssh/id_rsa exists and is readable by linbo user
 # =============================================================================
 _ensure_linbo_ssh_key() {
-    log_info "Provisioning LINBO SSH client key..."
+    log_info "Configuring SSH client key for LINBO..."
 
     local key_path="/root/.ssh/id_rsa"
-    local key_copy="/etc/linuxmuster/linbo/linbo_client_key"
 
-    # Remove if it is a directory (broken setup artifact on 10.40.0.10)
+    # Remove if it is a directory (broken setup artifact)
     if [ -d "$key_path" ]; then
         log_warn "$key_path is a directory — removing and regenerating"
         rm -rf "$key_path" "${key_path}.pub"
     fi
 
-    # Generate if missing
+    # Generate if missing (same as linuxmuster-setup does)
     if [ ! -f "$key_path" ]; then
-        log_info "Generating SSH client key for LINBO..."
+        log_info "Generating SSH client key..."
         mkdir -p /root/.ssh
         chmod 700 /root/.ssh
         ssh-keygen -m PEM -t rsa -b 3072 -N "" -f "$key_path" -q
@@ -448,14 +447,17 @@ _ensure_linbo_ssh_key() {
         log_ok "Existing key: $key_path"
     fi
 
-    # Ensure /etc/linuxmuster/linbo/ exists (created by linuxmuster-linbo7 APT install)
-    mkdir -p /etc/linuxmuster/linbo
+    # Keep original at 600 root:root (SSH standard requires this)
+    chmod 600 "$key_path"
+    chown root:root "$key_path"
 
-    # Copy to API-readable location (linbo user cannot traverse /root/.ssh/ dir)
-    cp "$key_path" "$key_copy"
-    chown root:linbo "$key_copy"
-    chmod 640 "$key_copy"
-    log_ok "LINBO client key installed: $key_copy (root:linbo 640)"
+    # Copy to /etc/linuxmuster/linbo/ (native LMN SSH config directory)
+    # API runs as linbo user and needs read access — original stays secure
+    local api_key="/etc/linuxmuster/linbo/ssh_host_rsa_key_client"
+    cp "$key_path" "$api_key"
+    chown root:linbo "$api_key"
+    chmod 640 "$api_key"
+    log_ok "SSH key: $key_path (600) + API copy: $api_key (640 root:linbo)"
 }
 
 # =============================================================================
@@ -552,7 +554,7 @@ ADMIN_PASSWORD=Muster!
 NODE_TLS_REJECT_UNAUTHORIZED=0
 
 # === SSH ===
-LINBO_CLIENT_SSH_KEY=/etc/linuxmuster/linbo/linbo_client_key
+LINBO_CLIENT_SSH_KEY=/etc/linuxmuster/linbo/ssh_host_rsa_key_client
 
 # === Optional overrides ===
 # HOST_SCAN_INTERVAL_SEC=60

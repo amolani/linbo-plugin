@@ -643,7 +643,7 @@ async function startServer() {
       // Wait for SSH keys + rsyncd.secrets to be readable (race condition on fresh deploy)
       // SSH container generates keys after API starts — need to wait for them
       const secretsPath = process.env.RSYNC_SECRETS || '/etc/linuxmuster/linbo/rsyncd.secrets';
-      const clientKeyPath = '/etc/linuxmuster/linbo/linbo_client_key';
+      const clientKeyPath = '/etc/linuxmuster/linbo/ssh_host_rsa_key_client';
       const dropbearKeyPath = '/etc/linuxmuster/linbo/dropbear_rsa_host_key';
       const maxWait = 30;
       let waited = 0;
