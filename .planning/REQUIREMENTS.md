@@ -38,8 +38,8 @@
 
 ### Frontend Nativ
 
-- [ ] **UI-01**: Vite Build erzeugt statische Dateien
-- [ ] **UI-02**: nginx serviert Frontend + Reverse Proxy fuer API + WebSocket Upgrade
+- [x] **UI-01**: Vite Build erzeugt statische Dateien
+- [x] **UI-02**: nginx serviert Frontend + Reverse Proxy fuer API + WebSocket Upgrade
 
 ### Installation
 
@@ -99,8 +99,8 @@
 | CACHE-02 | Phase 7 | Complete |
 | CACHE-03 | Phase 7 | Complete |
 | CACHE-04 | Phase 7 | Complete |
-| UI-01 | Phase 8 | Pending |
-| UI-02 | Phase 8 | Pending |
+| UI-01 | Phase 8 | Complete |
+| UI-02 | Phase 8 | Complete |
 | INST-01 | Phase 1 | Complete |
 | INST-02 | Phase 1 | Complete |
 | QUAL-01 | Phase 9 | Pending |
