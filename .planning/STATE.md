@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: completed
-stopped_at: Completed 04-02-PLAN.md
-last_updated: "2026-03-20T10:41:10.178Z"
-last_activity: "2026-03-20 — Completed 04-02: In-memory store with ioredis-compatible client facade"
+stopped_at: Completed 04-03-PLAN.md
+last_updated: "2026-03-20T10:55:00Z"
+last_activity: "2026-03-20 — Completed 04-03: redis.js delegation + index.js + rate-limit.js wiring"
 progress:
   total_phases: 10
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 11
-  completed_plans: 10
-  percent: 91
+  completed_plans: 11
+  percent: 100
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-19)
 
 **Core value:** Vanilla LINBO unberuehrt lassen, alles ueber eigene API-Schicht ansprechen — vollwertiger Caching-Satellit
-**Current focus:** Phase 4: API Filesystem Migration — store.js implemented (GREEN), redis.js delegation next
+**Current focus:** Phase 4 complete. API starts without Redis, /health returns store='up', all endpoints work via store.js.
 
 ## Current Position
 
-Phase: 4 of 10 (API Filesystem Migration)
-Plan: 2 of 3 in current phase (2 complete)
-Status: Plan 02 complete (store.js GREEN), ready for Plan 03 (redis.js delegation)
-Last activity: 2026-03-20 — Completed 04-02: In-memory store with ioredis-compatible client facade
+Phase: 4 of 10 (API Filesystem Migration) -- COMPLETE
+Plan: 3 of 3 in current phase (3 complete)
+Status: Phase 4 complete -- all plans executed, ready for Phase 5
+Last activity: 2026-03-20 — Completed 04-03: redis.js delegation + index.js + rate-limit.js wiring
 
-Progress: [█████████░] 91%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -46,14 +46,15 @@ Progress: [█████████░] 91%
 | 1. Install Scripts | 2/2 | 7 min | 3.5 min |
 | 2. systemd Units + Boot Scaffold | 3/3 | 20 min | 6.7 min |
 | 3. DHCP + PXE Boot | 3/3 | 9 min | 3.0 min |
-| 4. API Filesystem Migration | 1/3 | 4 min | 4.0 min |
+| 4. API Filesystem Migration | 3/3 | 20 min | 6.7 min |
 
 **Recent Trend:**
-- Last 5 plans: 02-03 (15 min), 03-01 (2 min), 03-02 (2 min), 03-03 (5 min), 04-01 (4 min)
-- Trend: Consistent fast execution, TDD RED phase is lightweight
+- Last 5 plans: 03-01 (2 min), 03-02 (2 min), 03-03 (5 min), 04-01 (4 min), 04-02 (6 min), 04-03 (10 min)
+- Trend: Consistent fast execution, Phase 4 complete
 
 *Updated after each plan completion*
 | Phase 04 P02 | 6 min | 1 tasks | 1 files |
+| Phase 04 P03 | 10 min | 3 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -101,6 +102,9 @@ Recent decisions affecting current work:
 - [Phase 04]: 6 internal Maps (strings, sets, hashes, sorted sets, lists, ttls) — separate _ttls Map tracks TTL for non-string types
 - [Phase 04]: Proxy-based pipeline supports both chainable and array calling conventions for ioredis compatibility
 - [Phase 04]: Lazy TTL expiry only (no background janitor) -- checked on every read, sufficient for school server scale
+- [Phase 04-03]: redis.js fully rewritten as thin delegate -- 80 lines replaced 200 lines of ioredis client management
+- [Phase 04-03]: /ready endpoint simplified to always-200 (store is always ready, no network dependency)
+- [Phase 04-03]: rate-limit.js RedisStore block removed entirely, not just bypassed
 
 ### Pending Todos
 
@@ -108,13 +112,13 @@ None yet.
 
 ### Blockers/Concerns
 
-- [Phase 4]: Filesystem migration must preserve the same call signatures that 16 importers expect — silent failures likely if function signatures drift
+- [Phase 4]: RESOLVED -- All 17 importers verified unchanged; redis.js exports identical API surface via store.js delegation
 - [Phase 5]: Auth middleware silent fallback in sync.js must be fixed during Phase 5 — security issue
 - [Phase 7]: Multi-school sync (CACHE-01) requires school parameter to thread through all batch endpoints — verify no endpoint drops it
 - [Phase 7]: Image caching (CACHE-02) rsync from Authority Server requires credentials/SSH key — confirm setup.sh provisions this
 
 ## Session Continuity
 
-Last session: 2026-03-20T10:41:10.173Z
-Stopped at: Completed 04-02-PLAN.md
+Last session: 2026-03-20T10:55:00Z
+Stopped at: Completed 04-03-PLAN.md (Phase 4 complete)
 Resume file: None
