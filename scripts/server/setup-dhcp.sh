@@ -100,7 +100,7 @@ cat > "${DHCP_DIR}/dhcpd.conf" << DHCPEOF
 # Dynamic subnet/device config comes from API sync (subnets.conf, devices/*.conf)
 
 # ---- Server identification ----
-server-identifier ${LINBO_HOSTNAME};
+server-identifier ${LINBO_SERVER_IP};
 update-static-leases true;
 ddns-update-style none;
 
