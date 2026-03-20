@@ -75,11 +75,49 @@ md5sum "$LINBO_DIR/linbo64" | awk '{print $1}' > "$LINBO_DIR/linbo64.md5"
 log_ok "linbo64 kernel copied ($(du -sh "$LINBO_DIR/linbo64" | cut -f1))"
 
 # =============================================================================
-# Step 3 — Build linbofs64 via update-linbofs (SSH keys, firmware, hooks)
+# Step 3 — rsyncd setup (BEFORE update-linbofs — it needs rsyncd.secrets)
 # =============================================================================
-log_info "Step 3: Building linbofs64 via update-linbofs..."
+log_info "Step 3: Configuring rsyncd..."
+
+# 3a: rsyncd.conf from template
+if [[ ! -f "$RSYNCD_TEMPLATE" ]]; then
+    log_error "rsyncd.conf template not found at $RSYNCD_TEMPLATE"
+    exit 1
+fi
+sed "s|@@linbodir@@|${LINBO_DIR}|g" "$RSYNCD_TEMPLATE" > "$RSYNCD_CONF"
+log_ok "rsyncd.conf written from template"
+
+# 3b: rsync.service drop-in (ProtectSystem=true — skipped by linbo-configure.sh on caching server)
+mkdir -p "$(dirname "$RSYNCD_OVERRIDE")"
+cat > "$RSYNCD_OVERRIDE" << 'EOF'
+[Service]
+ProtectSystem=true
+EOF
+log_ok "rsync.service drop-in written"
+
+# 3c: rsyncd.secrets (linbo password from .env RSYNC_PASSWORD)
+# MUST exist before update-linbofs runs (it reads the password to embed in linbofs64)
+if [[ -f "$ENV_FILE" ]]; then
+    rsync_pw=$(grep '^RSYNC_PASSWORD=' "$ENV_FILE" | cut -d= -f2- | tr -d '"'"'"' ')
+    if [[ -n "$rsync_pw" ]]; then
+        echo "linbo:${rsync_pw}" > "$RSYNCD_SECRETS"
+        chmod 600 "$RSYNCD_SECRETS"
+        log_ok "rsyncd.secrets written (chmod 600)"
+    else
+        log_warn "RSYNC_PASSWORD not found in $ENV_FILE — rsyncd.secrets not written"
+        log_warn "Run setup.sh first, then re-run this script"
+    fi
+else
+    log_warn "$ENV_FILE not found — rsyncd.secrets skipped (run setup.sh first)"
+fi
+
+# =============================================================================
+# Step 4 — Build linbofs64 via update-linbofs (SSH keys, firmware, hooks)
+# =============================================================================
+log_info "Step 4: Building linbofs64 via update-linbofs..."
 # update-linbofs packs the real linbofs64 with SSH host keys, firmware,
 # and any pre/post hooks — replaces the raw template copy.
+# Requires: setup.ini (from setup.sh) + rsyncd.secrets (Step 3c above)
 if [[ ! -x /usr/sbin/update-linbofs ]]; then
     log_warn "update-linbofs not found — falling back to template copy"
     if [[ ! -f "$LINBO_VAR/linbofs64.xz" ]]; then
@@ -102,45 +140,10 @@ else
 fi
 
 # =============================================================================
-# Step 4 — rsyncd setup
-# =============================================================================
-log_info "Step 4: Configuring rsyncd..."
-
-# 4a: rsyncd.conf from template
-if [[ ! -f "$RSYNCD_TEMPLATE" ]]; then
-    log_error "rsyncd.conf template not found at $RSYNCD_TEMPLATE"
-    exit 1
-fi
-sed "s|@@linbodir@@|${LINBO_DIR}|g" "$RSYNCD_TEMPLATE" > "$RSYNCD_CONF"
-log_ok "rsyncd.conf written from template"
-
-# 4b: rsync.service drop-in (ProtectSystem=true — skipped by linbo-configure.sh on caching server)
-mkdir -p "$(dirname "$RSYNCD_OVERRIDE")"
-cat > "$RSYNCD_OVERRIDE" << 'EOF'
-[Service]
-ProtectSystem=true
-EOF
-log_ok "rsync.service drop-in written"
-
-# 4c: rsyncd.secrets (linbo password from .env RSYNC_PASSWORD)
-if [[ -f "$ENV_FILE" ]]; then
-    rsync_pw=$(grep '^RSYNC_PASSWORD=' "$ENV_FILE" | cut -d= -f2- | tr -d '"'"'"' ')
-    if [[ -n "$rsync_pw" ]]; then
-        echo "linbo:${rsync_pw}" > "$RSYNCD_SECRETS"
-        chmod 600 "$RSYNCD_SECRETS"
-        log_ok "rsyncd.secrets written (chmod 600)"
-    else
-        log_warn "RSYNC_PASSWORD not found in $ENV_FILE — rsyncd.secrets not written"
-        log_warn "Run setup.sh first, then re-run this script"
-    fi
-else
-    log_warn "$ENV_FILE not found — rsyncd.secrets skipped (run setup.sh first)"
-fi
-
-# =============================================================================
 # Step 5 — Ensure tftpd-hpa and rsync are enabled
 # =============================================================================
 log_info "Step 5: Ensuring tftpd-hpa and rsync are active..."
+
 # tftpd-hpa: already started by linbo7 postinst (linbo-configure.sh restarts it)
 # rsync: needs enabling on caching server (postinst skips this without setup.ini)
 systemctl unmask tftpd-hpa rsync.service 2>/dev/null || true
@@ -162,16 +165,13 @@ log_ok "rsync enabled and start queued"
 # Step 6 — Set permissions
 # =============================================================================
 log_info "Step 6: Setting /srv/linbo permissions..."
-# /srv/linbo must be world-readable (755) so tftpd-hpa (runs as tftp user) can read all files
-chown -R root:root "$LINBO_DIR"
+# /srv/linbo owned by linbo:linbo — API writes start.confs, GRUB configs, images here
+# tftpd-hpa (runs as tftp user) needs read access — 755 ensures world-readable
+chown -R linbo:linbo "$LINBO_DIR"
 chmod -R 755 "$LINBO_DIR"
-# linbo user needs write access to specific subdirs (commands, GRUB spool pipes, tmp)
-for d in linbocmd boot/grub/spool tmp; do
-    if [[ -d "$LINBO_DIR/$d" ]]; then
-        chown -R linbo:linbo "$LINBO_DIR/$d"
-    fi
-done
-log_ok "Permissions set"
+# rsyncd.secrets must be root-only readable
+[[ -f "$RSYNCD_SECRETS" ]] && chown root:root "$RSYNCD_SECRETS" && chmod 600 "$RSYNCD_SECRETS"
+log_ok "Permissions set (/srv/linbo owned by linbo:linbo)"
 
 # =============================================================================
 # Step 7 — Write sentinel
