@@ -1,122 +1,116 @@
-# Requirements: LINBO Native Server
+# Requirements: LINBO Plugin v2.0 — Feature Verification
 
-**Defined:** 2026-03-19
-**Core Value:** Vanilla LINBO unberuehrt lassen, alles ueber eigene API-Schicht ansprechen — vollwertiger Caching-Satellit
+**Defined:** 2026-03-20
+**Core Value:** Jedes Feature das im Docker-Projekt existierte muss nativ funktionieren — ohne das LINBO-Paket anzufassen
 
-## v1 Requirements
+## v2.0 Requirements
 
-### Native LINBO Basis
+### Kernel Management
 
-- [x] **BASE-01**: linuxmuster-linbo7 per APT installiert — vanilla, kein Touch
-- [x] **BASE-02**: API liest native LINBO-Dateien direkt (/srv/linbo/, start.confs, GRUB-Configs)
-- [x] **BASE-03**: API steuert native LINBO-Dienste (rsync, tftpd-hpa) ueber systemd/Filesystem
+- [ ] **KERN-01**: Kernel-Varianten (stable/longterm/legacy) werden korrekt angezeigt mit Version und Groesse
+- [ ] **KERN-02**: Kernel-Wechsel per API aendert den aktiven Kernel in /srv/linbo/ und triggert GRUB-Update
+- [ ] **KERN-03**: Kernel-Status zeigt korrekte Version des aktiven Kernels
 
-### API Nativ
+### Linbofs Management
 
-- [x] **API-01**: Express API laeuft als systemd Service (linbo-api.service)
-- [x] **API-02**: redis.js durch direkte Filesystem-Operationen ersetzen — Hosts, Configs, Settings aus Dateien lesen statt Cache
-- [x] **API-03**: Host-Online-Status als einfache In-Memory Map (fluechtig, kein Persist noetig)
-- [x] **API-04**: Sync-Lock als Lock-Datei statt Redis-Key
-- [x] **API-05**: ioredis, dockerode, rate-limit-redis aus package.json entfernen
-- [x] **API-06**: Docker DNS Hostnamen durch localhost ersetzen
-- [x] **API-07**: Health-Endpoint ohne Redis-Check
-- [x] **API-08**: containerLogs.js durch journald-Streaming ersetzen oder deaktivieren
-- [x] **API-09**: setup-bootfiles.sh als systemd oneshot — provisioniert Boot-Files einmalig
+- [ ] **LFS-01**: Linbofs-Status zeigt Groesse, MD5, Datum korrekt an
+- [ ] **LFS-02**: Linbofs-Rebuild per API triggert update-linbofs und liefert Fortschritt per WebSocket
+- [ ] **LFS-03**: Patch-Status zeigt Hook-Informationen korrekt an
 
-### DHCP
+### Firmware Management
 
-- [x] **DHCP-01**: isc-dhcp-server nativ installiert und als systemd Service konfiguriert
-- [x] **DHCP-02**: DHCP-Config wird vom LMN Authority Server gesynct (wie im Docker-Projekt)
-- [x] **DHCP-03**: PXE Boot Options korrekt konfiguriert (next-server, filename fuer GRUB)
+- [ ] **FW-01**: Firmware-Detect erkennt benoetigte Firmware von Online-Clients per SSH
+- [ ] **FW-02**: Firmware-Eintraege koennen hinzugefuegt und in linbofs64 eingebaut werden
+- [ ] **FW-03**: SSH-Key (linbo_client_key) ist korrekt konfiguriert fuer Client-Zugriff
 
-### Caching-Satellit
+### GRUB Config Management
 
-- [x] **CACHE-01**: Multi-School Sync — school-Parameter durchgaengig, bis zu 40 Schulen
-- [x] **CACHE-02**: Image Caching — Images lokal vorhalten, rsync-Download von Authority Server
-- [x] **CACHE-03**: Auto-Discovery — automatische Erkennung neuer Clients im Netz
-- [x] **CACHE-04**: First-Boot Sync — automatischer erster Sync bei neuem Client
+- [ ] **GRUB-01**: GRUB-Configs fuer alle Gruppen werden korrekt angezeigt
+- [ ] **GRUB-02**: GRUB-Config Regenerierung per API funktioniert
+- [ ] **GRUB-03**: GRUB-Config Cleanup entfernt verwaiste Configs
 
-### Frontend Nativ
+### Driver Management
 
-- [x] **UI-01**: Vite Build erzeugt statische Dateien
-- [x] **UI-02**: nginx serviert Frontend + Reverse Proxy fuer API + WebSocket Upgrade
+- [ ] **DRV-01**: Treiber-Profile koennen erstellt und verwaltet werden
+- [ ] **DRV-02**: match.conf kann per API gelesen und geschrieben werden
+- [ ] **DRV-03**: HWInfo-Scan von Online-Clients funktioniert per SSH
 
-### Installation
+### Remote Operations
 
-- [x] **INST-01**: install.sh installiert Abhaengigkeiten (Node.js 20, npm, nginx, linuxmuster-linbo7, isc-dhcp-server)
-- [x] **INST-02**: setup.sh fuer Erstkonfiguration (Pfade, Berechtigungen, Secrets, systemd enable)
+- [ ] **OPS-01**: Reboot/Halt Befehl an LINBO-Client per API funktioniert
+- [ ] **OPS-02**: Partition/Sync/Start Befehl per API funktioniert
+- [ ] **OPS-03**: Wake-on-LAN per API funktioniert
+- [ ] **OPS-04**: Geplante Befehle (.cmd Dateien) werden korrekt geschrieben und ausgefuehrt
 
-### Code Quality
+### Image Management
 
-- [ ] **QUAL-01**: Docker-Artefakte entfernt (Dockerfiles, docker-compose, .dockerignore, containers/ Struktur)
-- [ ] **QUAL-02**: Saubere Verzeichnisstruktur ohne Container-Verschachtelung
-- [ ] **QUAL-03**: Kein toter Code — alles Docker/Redis-spezifische das nicht mehr gebraucht wird, ist weg
+- [ ] **IMG-01**: Image-Liste zeigt verfuegbare Images in /srv/linbo/
+- [ ] **IMG-02**: Image-Pull von Authority Server per rsync funktioniert
+- [ ] **IMG-03**: Image-Push zum Authority Server per rsync funktioniert
 
-### Verification (Live-Test)
+### SSH & Terminal
 
-- [ ] **VERIFY-01**: Natives LINBO bootet — PXE Client bekommt DHCP + GRUB + Kernel + linbofs64 vom nativen Server
-- [ ] **VERIFY-02**: API zeigt Hosts und Status im Web-Frontend
-- [ ] **VERIFY-03**: Remote-Operationen funktionieren (Reboot, Sync, Start)
-- [ ] **VERIFY-04**: WebSocket Echtzeit-Updates kommen durch nginx an
-- [ ] **VERIFY-05**: Multi-School Sync funktioniert — Hosts aus verschiedenen Schulen werden korrekt geladen
+- [ ] **SSH-01**: SSH-Key-Chain ist korrekt konfiguriert (Dropbear Keys → linbo_client_key)
+- [ ] **SSH-02**: SSH-Terminal zu LINBO-Client im Browser funktioniert
+- [ ] **SSH-03**: HWInfo-Scanner erkennt Online-Clients automatisch
 
-## v2 Requirements
+### WLAN Management
 
-- **PKG-01**: .deb Paket (apt install linbo-native)
-- **PKG-02**: Kombiniertes Paket (linbo7 + eigene Features)
-- **EXT-01**: Multicast/Torrent Image-Verteilung
+- [ ] **WLAN-01**: WLAN-Config kann gelesen und geschrieben werden
+- [ ] **WLAN-02**: WLAN-Config wird korrekt in linbofs64 eingebaut
+
+### LINBO Update
+
+- [ ] **UPD-01**: LINBO-Update Status wird korrekt angezeigt
+- [ ] **UPD-02**: LINBO-Update per API triggert apt update/install fuer linuxmuster-linbo7
 
 ## Out of Scope
 
 | Feature | Reason |
 |---------|--------|
-| LINBO-Paket modifizieren | Bleibt 100% vanilla |
-| Docker beibehalten | Wird komplett entfernt |
-| Redis / store.js | Nicht noetig — Dateien liegen nativ auf dem Server |
-| PostgreSQL/Prisma | War nie aktiv |
-| Standalone-Modus | Bereits entfernt |
+| LINBO-Paket modifizieren | Bleibt 100% vanilla — nur API/Frontend |
+| Neue Features hinzufuegen | Nur bestehende Docker-Features verifizieren |
+| Multicast/Torrent | Eigener Milestone |
 
 ## Traceability
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| BASE-01 | Phase 2 | Complete |
-| BASE-02 | Phase 6 | Complete |
-| BASE-03 | Phase 6 | Complete |
-| API-01 | Phase 2 | Complete |
-| API-02 | Phase 4 | Complete |
-| API-03 | Phase 4 | Complete |
-| API-04 | Phase 4 | Complete |
-| API-05 | Phase 5 | Complete |
-| API-06 | Phase 5 | Complete |
-| API-07 | Phase 5 | Complete |
-| API-08 | Phase 5 | Complete |
-| API-09 | Phase 2 | Complete |
-| DHCP-01 | Phase 3 | Complete |
-| DHCP-02 | Phase 3 | Complete |
-| DHCP-03 | Phase 3 | Complete |
-| CACHE-01 | Phase 7 | Complete |
-| CACHE-02 | Phase 7 | Complete |
-| CACHE-03 | Phase 7 | Complete |
-| CACHE-04 | Phase 7 | Complete |
-| UI-01 | Phase 8 | Complete |
-| UI-02 | Phase 8 | Complete |
-| INST-01 | Phase 1 | Complete |
-| INST-02 | Phase 1 | Complete |
-| QUAL-01 | Phase 9 | Pending |
-| QUAL-02 | Phase 9 | Pending |
-| QUAL-03 | Phase 9 | Pending |
-| VERIFY-01 | Phase 10 | Pending |
-| VERIFY-02 | Phase 10 | Pending |
-| VERIFY-03 | Phase 10 | Pending |
-| VERIFY-04 | Phase 10 | Pending |
-| VERIFY-05 | Phase 10 | Pending |
+| SSH-01 | Phase 11 | In Progress (11-01 done) |
+| SSH-02 | Phase 11 | Pending |
+| SSH-03 | Phase 11 | Pending |
+| KERN-01 | Phase 12 | Pending |
+| KERN-02 | Phase 12 | Pending |
+| KERN-03 | Phase 12 | Pending |
+| LFS-01 | Phase 13 | Pending |
+| LFS-02 | Phase 13 | Pending |
+| LFS-03 | Phase 13 | Pending |
+| FW-01 | Phase 14 | Pending |
+| FW-02 | Phase 14 | Pending |
+| FW-03 | Phase 14 | Pending |
+| GRUB-01 | Phase 15 | Pending |
+| GRUB-02 | Phase 15 | Pending |
+| GRUB-03 | Phase 15 | Pending |
+| DRV-01 | Phase 16 | Pending |
+| DRV-02 | Phase 16 | Pending |
+| DRV-03 | Phase 16 | Pending |
+| OPS-01 | Phase 17 | Pending |
+| OPS-02 | Phase 17 | Pending |
+| OPS-03 | Phase 17 | Pending |
+| OPS-04 | Phase 17 | Pending |
+| IMG-01 | Phase 18 | Pending |
+| IMG-02 | Phase 18 | Pending |
+| IMG-03 | Phase 18 | Pending |
+| WLAN-01 | Phase 19 | Pending |
+| WLAN-02 | Phase 19 | Pending |
+| UPD-01 | Phase 20 | Pending |
+| UPD-02 | Phase 20 | Pending |
 
 **Coverage:**
-- v1 requirements: 31 total
-- Mapped to phases: 31
+- v2.0 requirements: 29 total
+- Mapped to phases: 29
 - Unmapped: 0
 
 ---
-*Requirements defined: 2026-03-19*
-*Last updated: 2026-03-19 — DHCP + Caching-Satellit Features hinzugefuegt; alle 31 Requirements auf 10 Phasen gemappt*
+*Requirements defined: 2026-03-20*
+*Traceability updated: 2026-03-20 (v2.0 roadmap)*
