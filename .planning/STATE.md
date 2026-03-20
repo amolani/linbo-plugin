@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: completed
-stopped_at: Completed 04-03-PLAN.md (Phase 4 complete)
-last_updated: "2026-03-20T11:07:10.814Z"
-last_activity: "2026-03-20 — Completed 04-03: redis.js delegation + index.js + rate-limit.js wiring"
+status: in-progress
+stopped_at: Completed 05-01-PLAN.md
+last_updated: "2026-03-20T11:49:56Z"
+last_activity: "2026-03-20 — Completed 05-01: RED tests for containerLogs + health endpoint"
 progress:
   total_phases: 10
   completed_phases: 4
-  total_plans: 11
-  completed_plans: 11
-  percent: 100
+  total_plans: 14
+  completed_plans: 12
+  percent: 86
 ---
 
 # Project State
@@ -21,23 +21,23 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-19)
 
 **Core value:** Vanilla LINBO unberuehrt lassen, alles ueber eigene API-Schicht ansprechen — vollwertiger Caching-Satellit
-**Current focus:** Phase 4 complete. API starts without Redis, /health returns store='up', all endpoints work via store.js.
+**Current focus:** Phase 5 in progress. RED TDD tests written for Docker dependency removal (containerLogs, health endpoint).
 
 ## Current Position
 
-Phase: 4 of 10 (API Filesystem Migration) -- COMPLETE
-Plan: 3 of 3 in current phase (3 complete)
-Status: Phase 4 complete -- all plans executed, ready for Phase 5
-Last activity: 2026-03-20 — Completed 04-03: redis.js delegation + index.js + rate-limit.js wiring
+Phase: 5 of 10 (Dependency Cleanup)
+Plan: 1 of 3 in current phase (1 complete)
+Status: Plan 01 complete — RED tests written, ready for Plan 02 (GREEN implementation)
+Last activity: 2026-03-20 — Completed 05-01: RED tests for containerLogs + health endpoint
 
-Progress: [██████████] 100%
+Progress: [████████░░] 86%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 9
-- Average duration: 4.8 min
-- Total execution time: 0.72 hours
+- Total plans completed: 12
+- Average duration: 5.5 min
+- Total execution time: 1.10 hours
 
 **By Phase:**
 
@@ -47,14 +47,16 @@ Progress: [██████████] 100%
 | 2. systemd Units + Boot Scaffold | 3/3 | 20 min | 6.7 min |
 | 3. DHCP + PXE Boot | 3/3 | 9 min | 3.0 min |
 | 4. API Filesystem Migration | 3/3 | 20 min | 6.7 min |
+| 5. Dependency Cleanup | 1/3 | 17 min | 17.0 min |
 
 **Recent Trend:**
-- Last 5 plans: 03-01 (2 min), 03-02 (2 min), 03-03 (5 min), 04-01 (4 min), 04-02 (6 min), 04-03 (10 min)
-- Trend: Consistent fast execution, Phase 4 complete
+- Last 5 plans: 03-03 (5 min), 04-01 (4 min), 04-02 (6 min), 04-03 (10 min), 05-01 (17 min)
+- Trend: Phase 5 started, TDD RED tests complete
 
 *Updated after each plan completion*
 | Phase 04 P02 | 6 min | 1 tasks | 1 files |
 | Phase 04 P03 | 10 min | 3 tasks | 4 files |
+| Phase 05 P01 | 17 min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -105,6 +107,9 @@ Recent decisions affecting current work:
 - [Phase 04-03]: redis.js fully rewritten as thin delegate -- 80 lines replaced 200 lines of ioredis client management
 - [Phase 04-03]: /ready endpoint simplified to always-200 (store is always ready, no network dependency)
 - [Phase 04-03]: rate-limit.js RedisStore block removed entirely, not just bypassed
+- [Phase 05-01]: Source-level assertions for services.linbo check (avoids requiring full index.js which triggers server startup)
+- [Phase 05-01]: API-08 behavioral tests run against real containerLogs module with Docker socket available -- more RED tests than plan anticipated
+- [Phase 05-01]: Split nginx.conf Docker hostname checks into two tests (http://api: and http://linbo-api:) for clarity
 
 ### Pending Todos
 
@@ -119,6 +124,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-20T10:55:00Z
-Stopped at: Completed 04-03-PLAN.md (Phase 4 complete)
+Last session: 2026-03-20T11:49:56Z
+Stopped at: Completed 05-01-PLAN.md
 Resume file: None

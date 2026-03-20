@@ -17,10 +17,10 @@
 - [x] **API-02**: redis.js durch direkte Filesystem-Operationen ersetzen — Hosts, Configs, Settings aus Dateien lesen statt Cache
 - [x] **API-03**: Host-Online-Status als einfache In-Memory Map (fluechtig, kein Persist noetig)
 - [x] **API-04**: Sync-Lock als Lock-Datei statt Redis-Key
-- [ ] **API-05**: ioredis, dockerode, rate-limit-redis aus package.json entfernen
-- [ ] **API-06**: Docker DNS Hostnamen durch localhost ersetzen
-- [ ] **API-07**: Health-Endpoint ohne Redis-Check
-- [ ] **API-08**: containerLogs.js durch journald-Streaming ersetzen oder deaktivieren
+- [x] **API-05**: ioredis, dockerode, rate-limit-redis aus package.json entfernen
+- [x] **API-06**: Docker DNS Hostnamen durch localhost ersetzen
+- [x] **API-07**: Health-Endpoint ohne Redis-Check
+- [x] **API-08**: containerLogs.js durch journald-Streaming ersetzen oder deaktivieren
 - [x] **API-09**: setup-bootfiles.sh als systemd oneshot — provisioniert Boot-Files einmalig
 
 ### DHCP
@@ -87,10 +87,10 @@
 | API-02 | Phase 4 | Complete |
 | API-03 | Phase 4 | Complete |
 | API-04 | Phase 4 | Complete |
-| API-05 | Phase 5 | Pending |
-| API-06 | Phase 5 | Pending |
-| API-07 | Phase 5 | Pending |
-| API-08 | Phase 5 | Pending |
+| API-05 | Phase 5 | Complete |
+| API-06 | Phase 5 | Complete |
+| API-07 | Phase 5 | Complete |
+| API-08 | Phase 5 | Complete |
 | API-09 | Phase 2 | Complete |
 | DHCP-01 | Phase 3 | Complete |
 | DHCP-02 | Phase 3 | Complete |
