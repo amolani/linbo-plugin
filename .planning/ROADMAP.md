@@ -332,7 +332,7 @@ v2.0 phases: 11 → 12 → 13 → 14 → 15 → 16 → 17 → 18 → 19 → 20
 | 8. Frontend Build + nginx | v1.0 | 2/2 | Complete | 2026-03-20 |
 | 9. Docker Artifact Removal | v1.0 | 0/? | Not started | - |
 | 10. End-to-End Verification | v1.0 | 0/? | Not started | - |
-| 11. SSH & Terminal | v2.0 | 1/3 | In progress | - |
+| 11. SSH & Terminal | 2/3 | In Progress|  | - |
 | 12. Kernel Management | v2.0 | 0/? | Not started | - |
 | 13. Linbofs Management | v2.0 | 0/? | Not started | - |
 | 14. Firmware Management | v2.0 | 0/? | Not started | - |

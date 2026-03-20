@@ -50,9 +50,9 @@
 
 ### SSH & Terminal
 
-- [ ] **SSH-01**: SSH-Key-Chain ist korrekt konfiguriert (Dropbear Keys → linbo_client_key)
-- [ ] **SSH-02**: SSH-Terminal zu LINBO-Client im Browser funktioniert
-- [ ] **SSH-03**: HWInfo-Scanner erkennt Online-Clients automatisch
+- [x] **SSH-01**: SSH-Key-Chain ist korrekt konfiguriert (Dropbear Keys → linbo_client_key)
+- [x] **SSH-02**: SSH-Terminal zu LINBO-Client im Browser funktioniert
+- [x] **SSH-03**: HWInfo-Scanner erkennt Online-Clients automatisch
 
 ### WLAN Management
 
@@ -77,8 +77,8 @@
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | SSH-01 | Phase 11 | In Progress (11-01 done) |
-| SSH-02 | Phase 11 | Pending |
-| SSH-03 | Phase 11 | Pending |
+| SSH-02 | Phase 11 | Complete |
+| SSH-03 | Phase 11 | Complete |
 | KERN-01 | Phase 12 | Pending |
 | KERN-02 | Phase 12 | Pending |
 | KERN-03 | Phase 12 | Pending |
