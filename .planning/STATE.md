@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: in-progress
-stopped_at: Completed 04-01-PLAN.md
-last_updated: "2026-03-20T10:21:38Z"
-last_activity: "2026-03-20 — Completed 04-01: Jest config fix + RED test suites for store.js"
+status: completed
+stopped_at: Completed 04-02-PLAN.md
+last_updated: "2026-03-20T10:41:10.178Z"
+last_activity: "2026-03-20 — Completed 04-02: In-memory store with ioredis-compatible client facade"
 progress:
   total_phases: 10
   completed_phases: 3
   total_plans: 11
-  completed_plans: 9
-  percent: 82
+  completed_plans: 10
+  percent: 91
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-19)
 
 **Core value:** Vanilla LINBO unberuehrt lassen, alles ueber eigene API-Schicht ansprechen — vollwertiger Caching-Satellit
-**Current focus:** Phase 4: API Filesystem Migration — TDD RED tests written, store.js implementation next
+**Current focus:** Phase 4: API Filesystem Migration — store.js implemented (GREEN), redis.js delegation next
 
 ## Current Position
 
 Phase: 4 of 10 (API Filesystem Migration)
-Plan: 1 of 3 in current phase (1 complete)
-Status: Plan 01 complete (RED tests), ready for Plan 02 (store.js GREEN)
-Last activity: 2026-03-20 — Completed 04-01: Jest config fix + RED test suites for store.js
+Plan: 2 of 3 in current phase (2 complete)
+Status: Plan 02 complete (store.js GREEN), ready for Plan 03 (redis.js delegation)
+Last activity: 2026-03-20 — Completed 04-02: In-memory store with ioredis-compatible client facade
 
-Progress: [████████░░] 82%
+Progress: [█████████░] 91%
 
 ## Performance Metrics
 
@@ -53,6 +53,7 @@ Progress: [████████░░] 82%
 - Trend: Consistent fast execution, TDD RED phase is lightweight
 
 *Updated after each plan completion*
+| Phase 04 P02 | 6 min | 1 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -97,6 +98,9 @@ Recent decisions affecting current work:
 - [Phase 04-01]: Root-level shims (tests/setup.js etc.) instead of modifying jest.config.js paths -- preserves existing api/ files
 - [Phase 04-01]: store.test.js covers full ioredis-compatible API surface (30 tests) including NX/EX, pipeline tuples, scanStream
 - [Phase 04-01]: host-status worker tests mock redis.getClient() to delegate to store.client -- zero worker changes needed
+- [Phase 04]: 6 internal Maps (strings, sets, hashes, sorted sets, lists, ttls) — separate _ttls Map tracks TTL for non-string types
+- [Phase 04]: Proxy-based pipeline supports both chainable and array calling conventions for ioredis compatibility
+- [Phase 04]: Lazy TTL expiry only (no background janitor) -- checked on every read, sufficient for school server scale
 
 ### Pending Todos
 
@@ -111,6 +115,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-20T10:21:38Z
-Stopped at: Completed 04-01-PLAN.md
+Last session: 2026-03-20T10:41:10.173Z
+Stopped at: Completed 04-02-PLAN.md
 Resume file: None
