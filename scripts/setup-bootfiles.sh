@@ -75,19 +75,31 @@ md5sum "$LINBO_DIR/linbo64" | awk '{print $1}' > "$LINBO_DIR/linbo64.md5"
 log_ok "linbo64 kernel copied ($(du -sh "$LINBO_DIR/linbo64" | cut -f1))"
 
 # =============================================================================
-# Step 3 — Copy linbofs64 placeholder
+# Step 3 — Build linbofs64 via update-linbofs (SSH keys, firmware, hooks)
 # =============================================================================
-log_info "Step 3: Copying linbofs64.xz template as placeholder..."
-# NOTE: This is a template WITHOUT SSH keys or linbo password hash.
-# The real linbofs64 will be synced from the LMN authority server (Phase 7).
-# PXE clients will reach the LINBO boot screen but cannot authenticate yet.
-if [[ ! -f "$LINBO_VAR/linbofs64.xz" ]]; then
-    log_error "linbofs64.xz template not found at $LINBO_VAR/linbofs64.xz"
-    exit 1
+log_info "Step 3: Building linbofs64 via update-linbofs..."
+# update-linbofs packs the real linbofs64 with SSH host keys, firmware,
+# and any pre/post hooks — replaces the raw template copy.
+if [[ ! -x /usr/sbin/update-linbofs ]]; then
+    log_warn "update-linbofs not found — falling back to template copy"
+    if [[ ! -f "$LINBO_VAR/linbofs64.xz" ]]; then
+        log_error "linbofs64.xz template not found at $LINBO_VAR/linbofs64.xz"
+        exit 1
+    fi
+    cp "$LINBO_VAR/linbofs64.xz" "$LINBO_DIR/linbofs64"
+    md5sum "$LINBO_DIR/linbofs64" | awk '{print $1}' > "$LINBO_DIR/linbofs64.md5"
+    log_ok "linbofs64 template copied as fallback ($(du -sh "$LINBO_DIR/linbofs64" | cut -f1))"
+else
+    /usr/sbin/update-linbofs 2>&1 | while IFS= read -r line; do
+        echo "[linbo-setup]   $line"
+    done
+    if [[ -f "$LINBO_DIR/linbofs64" ]]; then
+        log_ok "linbofs64 built successfully ($(du -sh "$LINBO_DIR/linbofs64" | cut -f1))"
+    else
+        log_error "update-linbofs did not produce $LINBO_DIR/linbofs64"
+        exit 1
+    fi
 fi
-cp "$LINBO_VAR/linbofs64.xz" "$LINBO_DIR/linbofs64"
-md5sum "$LINBO_DIR/linbofs64" | awk '{print $1}' > "$LINBO_DIR/linbofs64.md5"
-log_ok "linbofs64 placeholder copied ($(du -sh "$LINBO_DIR/linbofs64" | cut -f1))"
 
 # =============================================================================
 # Step 4 — rsyncd setup
