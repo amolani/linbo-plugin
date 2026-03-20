@@ -126,6 +126,57 @@ describe('SSH Service', () => {
       process.env.SSH_PRIVATE_KEY = origFallback;
       spy.mockRestore();
     });
+
+    test('respects LINBO_CLIENT_SSH_KEY env var as primary key path at module load time', () => {
+      // linboKeyPath is resolved at require-time — must reset module registry
+      const origKey = process.env.LINBO_CLIENT_SSH_KEY;
+      process.env.LINBO_CLIENT_SSH_KEY = '/custom/path/to/key';
+
+      // Isolate module registry so we can re-require with the new env var
+      // Save and restore to avoid breaking ssh2 mock for later tests
+      jest.isolateModules(() => {
+        const customKey = Buffer.from('-----BEGIN RSA PRIVATE KEY-----\ncustom\n-----END RSA PRIVATE KEY-----');
+        const spy = jest.spyOn(fs, 'readFileSync').mockImplementation((path) => {
+          if (path === '/custom/path/to/key') return customKey;
+          throw new Error('ENOENT');
+        });
+
+        const freshSsh = require('../../../src/services/ssh.service');
+        const result = freshSsh._testing.getPrivateKey();
+        expect(result).toBe(customKey);
+
+        spy.mockRestore();
+      });
+
+      // Cleanup env
+      if (origKey !== undefined) {
+        process.env.LINBO_CLIENT_SSH_KEY = origKey;
+      } else {
+        delete process.env.LINBO_CLIENT_SSH_KEY;
+      }
+    });
+
+    test('error message when key missing does not contain "SSH container"', () => {
+      const spy = jest.spyOn(fs, 'readFileSync').mockImplementation(() => {
+        throw new Error('ENOENT: no such file or directory');
+      });
+      const origFallback = process.env.SSH_PRIVATE_KEY;
+      delete process.env.SSH_PRIVATE_KEY;
+
+      let thrownMessage = '';
+      try {
+        _resetCache();
+        getPrivateKey();
+      } catch (e) {
+        thrownMessage = e.message;
+      }
+
+      expect(thrownMessage).not.toContain('SSH container');
+      expect(thrownMessage).toContain('linbo_client_key');
+
+      process.env.SSH_PRIVATE_KEY = origFallback;
+      spy.mockRestore();
+    });
   });
 
   describe('getConfig', () => {
