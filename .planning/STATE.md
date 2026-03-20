@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: in-progress
-stopped_at: Completed 05-01-PLAN.md
-last_updated: "2026-03-20T11:49:56Z"
-last_activity: "2026-03-20 — Completed 05-01: RED tests for containerLogs + health endpoint"
+stopped_at: Completed 05-02-PLAN.md
+last_updated: "2026-03-20T12:23:00Z"
+last_activity: "2026-03-20 — Completed 05-02: GREEN implementation for containerLogs + health + hostname cleanup"
 progress:
   total_phases: 10
   completed_phases: 4
   total_plans: 14
-  completed_plans: 12
-  percent: 86
+  completed_plans: 13
+  percent: 93
 ---
 
 # Project State
@@ -21,23 +21,23 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-19)
 
 **Core value:** Vanilla LINBO unberuehrt lassen, alles ueber eigene API-Schicht ansprechen — vollwertiger Caching-Satellit
-**Current focus:** Phase 5 in progress. RED TDD tests written for Docker dependency removal (containerLogs, health endpoint).
+**Current focus:** Phase 5 in progress. GREEN implementation complete -- containerLogs uses journald, Docker hostnames replaced, health checks /srv/linbo.
 
 ## Current Position
 
 Phase: 5 of 10 (Dependency Cleanup)
-Plan: 1 of 3 in current phase (1 complete)
-Status: Plan 01 complete — RED tests written, ready for Plan 02 (GREEN implementation)
-Last activity: 2026-03-20 — Completed 05-01: RED tests for containerLogs + health endpoint
+Plan: 2 of 3 in current phase (2 complete)
+Status: Plan 02 complete — GREEN implementation done, containerLogs rewritten with journald, Docker hostnames removed
+Last activity: 2026-03-20 — Completed 05-02: GREEN implementation for containerLogs + health + hostname cleanup
 
-Progress: [████████░░] 86%
+Progress: [█████████░] 93%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 12
-- Average duration: 5.5 min
-- Total execution time: 1.10 hours
+- Total plans completed: 13
+- Average duration: 5.7 min
+- Total execution time: 1.28 hours
 
 **By Phase:**
 
@@ -47,16 +47,17 @@ Progress: [████████░░] 86%
 | 2. systemd Units + Boot Scaffold | 3/3 | 20 min | 6.7 min |
 | 3. DHCP + PXE Boot | 3/3 | 9 min | 3.0 min |
 | 4. API Filesystem Migration | 3/3 | 20 min | 6.7 min |
-| 5. Dependency Cleanup | 1/3 | 17 min | 17.0 min |
+| 5. Dependency Cleanup | 2/3 | 28 min | 14.0 min |
 
 **Recent Trend:**
-- Last 5 plans: 03-03 (5 min), 04-01 (4 min), 04-02 (6 min), 04-03 (10 min), 05-01 (17 min)
-- Trend: Phase 5 started, TDD RED tests complete
+- Last 5 plans: 04-01 (4 min), 04-02 (6 min), 04-03 (10 min), 05-01 (17 min), 05-02 (11 min)
+- Trend: Phase 5 GREEN implementation done, Plan 03 (package removal) remaining
 
 *Updated after each plan completion*
 | Phase 04 P02 | 6 min | 1 tasks | 1 files |
 | Phase 04 P03 | 10 min | 3 tasks | 4 files |
 | Phase 05 P01 | 17 min | 2 tasks | 2 files |
+| Phase 05 P02 | 11 min | 2 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -110,6 +111,9 @@ Recent decisions affecting current work:
 - [Phase 05-01]: Source-level assertions for services.linbo check (avoids requiring full index.js which triggers server startup)
 - [Phase 05-01]: API-08 behavioral tests run against real containerLogs module with Docker socket available -- more RED tests than plan anticipated
 - [Phase 05-01]: Split nginx.conf Docker hostname checks into two tests (http://api: and http://linbo-api:) for clarity
+- [Phase 05-02]: Full journald replacement (not stub/disable) for containerLogs.js -- preserves log streaming capability on native server
+- [Phase 05-02]: isAvailable() checks /usr/bin/journalctl existence -- returns true on servers with systemd, false in CI/containers
+- [Phase 05-02]: fs.accessSync for /srv/linbo health check -- synchronous is fine for single stat call in health endpoint
 
 ### Pending Todos
 
@@ -124,6 +128,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-20T11:49:56Z
-Stopped at: Completed 05-01-PLAN.md
+Last session: 2026-03-20T12:23:00Z
+Stopped at: Completed 05-02-PLAN.md
 Resume file: None
