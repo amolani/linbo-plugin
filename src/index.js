@@ -1,6 +1,6 @@
 /**
- * LINBO Docker - API Server
- * Main entry point with Redis and modular routes (sync-only, no Prisma/PostgreSQL)
+ * LINBO Native - API Server
+ * Main entry point with in-memory store and modular routes (sync-only, no Prisma/PostgreSQL)
  */
 
 const express = require('express');
@@ -20,7 +20,7 @@ const redis = require('./lib/redis');
 const websocket = require('./lib/websocket');
 const WebSocket = require('ws');
 
-// Import route factory (async — called after Redis is ready)
+// Import route factory (async — called after store is ready)
 const createRouter = require('./routes');
 
 // Import verifyToken for WebSocket auth (used in upgrade handler)
@@ -140,25 +140,10 @@ app.get('/health', async (req, res) => {
     serverIp: process.env.LINBO_SERVER_IP || '10.0.0.1',
     services: {
       api: 'up',
-      redis: 'unknown',
+      store: 'up',
       websocket: 'unknown',
     },
   };
-
-  // Check Redis connection
-  try {
-    const redisClient = redis.getClient();
-    if (redisClient && redisClient.status === 'ready') {
-      await redisClient.ping();
-      health.services.redis = 'up';
-    } else {
-      health.services.redis = 'down';
-      health.status = 'degraded';
-    }
-  } catch (err) {
-    health.services.redis = 'down';
-    health.status = 'degraded';
-  }
 
   // Check WebSocket
   const wss = websocket.getServer();
@@ -173,24 +158,8 @@ app.get('/health', async (req, res) => {
   res.status(statusCode).json(health);
 });
 
-app.get('/ready', async (req, res) => {
-  try {
-    // Check if Redis is ready
-    const redisClient = redis.getClient();
-    if (redisClient && redisClient.status === 'ready') {
-      await redisClient.ping();
-    } else {
-      throw new Error('Redis not ready');
-    }
-
-    res.json({ status: 'ready', timestamp: new Date().toISOString() });
-  } catch (err) {
-    res.status(503).json({
-      status: 'not ready',
-      error: err.message || 'Service not available',
-      timestamp: new Date().toISOString(),
-    });
-  }
+app.get('/ready', (req, res) => {
+  res.json({ status: 'ready', timestamp: new Date().toISOString() });
 });
 
 // =============================================================================
@@ -266,25 +235,8 @@ async function startServer() {
   // Validate secrets before proceeding
   validateSecrets();
 
-  // Connect to Redis
-  console.log('Connecting to Redis...');
-  try {
-    const redisClient = redis.getClient();
-    // Wait for connection
-    await new Promise((resolve, reject) => {
-      if (redisClient.status === 'ready') {
-        resolve();
-      } else {
-        redisClient.once('ready', resolve);
-        redisClient.once('error', reject);
-        setTimeout(() => reject(new Error('Redis connection timeout')), 5000);
-      }
-    });
-    console.log('  Redis connected');
-  } catch (err) {
-    console.error('  Redis connection failed:', err.message);
-    console.log('  Server will start, but caching will be disabled');
-  }
+  // Store initialized synchronously (no Redis connection needed)
+  console.log('Store initialized (in-memory, no Redis)');
 
   // Mount API routes (after Redis is ready)
   console.log('Mounting API routes...');
@@ -587,8 +539,8 @@ async function startServer() {
   // before the DHCP container needs them.
   if (process.env.SYNC_ENABLED === 'true') {
     try {
-      const redisClient = redis.getClient();
-      const cursor = await redisClient.get('sync:cursor');
+      const storeClient = redis.getClient();
+      const cursor = await storeClient.get('sync:cursor');
       if (!cursor) {
         console.log('  First boot detected (no sync cursor) — triggering initial sync...');
         const syncService = require('./services/sync.service');
@@ -784,12 +736,12 @@ async function shutdown(signal) {
       console.log('WebSocket connections closed');
     }
 
-    // Disconnect Redis
+    // Flush store snapshot to disk
     try {
       await redis.disconnect();
-      console.log('Redis disconnected');
+      console.log('Store snapshot saved');
     } catch (err) {
-      console.error('Redis disconnect error:', err.message);
+      console.error('Store flush error:', err.message);
     }
 
     console.log('Graceful shutdown complete');

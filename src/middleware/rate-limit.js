@@ -1,10 +1,10 @@
 /**
- * LINBO Docker - Rate Limiting Middleware
- * Login rate limiter using express-rate-limit with Redis-backed store.
+ * LINBO Native - Rate Limiting Middleware
+ * Login rate limiter using express-rate-limit with in-memory store.
  *
  * Limits login attempts to 5 per minute per IP address.
- * Uses Redis store in production for distributed counting,
- * falls back to in-memory store in test or when Redis is unavailable.
+ * Redis rate limiting removed in Phase 4 -- in-memory resets on restart.
+ * Acceptable for single-process school server (no distributed counting needed).
  */
 
 const { rateLimit } = require('express-rate-limit');
@@ -12,25 +12,12 @@ const { rateLimit } = require('express-rate-limit');
 /**
  * Create a rate limiter for login attempts.
  * @param {object} [options] - Override options (useful for testing)
- * @param {object} [options.store] - Custom store (default: Redis in production, memory in test)
+ * @param {object} [options.store] - Custom store (default: in-memory MemoryStore)
  */
 function createLoginLimiter(options = {}) {
-  let store = options.store;
-
-  // Default to Redis store in non-test environments
-  if (!store && process.env.NODE_ENV !== 'test') {
-    try {
-      const { RedisStore } = require('rate-limit-redis');
-      const redis = require('../lib/redis');
-      store = new RedisStore({
-        sendCommand: (command, ...args) => redis.getClient().call(command, ...args),
-        prefix: 'rl:login:',
-      });
-    } catch (err) {
-      console.warn('[rate-limit] Redis store unavailable, falling back to in-memory store:', err.message);
-      // Falls through to default in-memory store
-    }
-  }
+  // Redis rate limiting removed in Phase 4 -- in-memory resets on restart.
+  // Acceptable for single-process school server (no distributed counting needed).
+  const store = options.store;
 
   return rateLimit({
     windowMs: 60 * 1000,           // 1 minute
