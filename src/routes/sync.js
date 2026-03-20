@@ -668,6 +668,43 @@ router.get('/stats', authenticate, async (req, res, next) => {
 });
 
 // ---------------------------------------------------------------------------
+// POST /sync/services/reload — Reload rsync and restart tftpd-hpa (BASE-03)
+// ---------------------------------------------------------------------------
+/**
+ * @openapi
+ * /sync/services/reload:
+ *   post:
+ *     tags: [Hosts & Configs]
+ *     summary: Reload rsync and restart tftpd-hpa via systemd
+ *     description: >
+ *       Sends SIGHUP to rsync (reload) and restarts tftpd-hpa.
+ *       Requires admin role. Returns success/errors for each service.
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Services reloaded (check success field for partial failures)
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden (admin role required)
+ */
+router.post('/services/reload', authenticate, requireAdmin, async (req, res, next) => {
+  try {
+    const result = await linboFs.reloadLinboServices();
+    res.json({
+      data: {
+        success: result.success,
+        errors: result.errors,
+        message: result.success ? 'Services reloaded' : 'Some services failed to reload',
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// ---------------------------------------------------------------------------
 // POST /sync/trigger — Trigger a sync cycle (admin only)
 // ---------------------------------------------------------------------------
 /**
