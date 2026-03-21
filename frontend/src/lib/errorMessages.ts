@@ -17,5 +17,6 @@ export function translateError(raw: string): string {
   }
   const exitMatch = raw.match(/Exit code (\d+)/);
   if (exitMatch) return `Befehl fehlgeschlagen (Exit-Code ${exitMatch[1]})`;
-  return raw; // fallback: show raw if no translation
+  // Fallback: generic message to avoid leaking internal error details
+  return 'Ein unerwarteter Fehler ist aufgetreten';
 }

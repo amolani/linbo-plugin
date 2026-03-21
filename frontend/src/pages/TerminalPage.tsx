@@ -84,7 +84,15 @@ export function TerminalPage() {
 
   const openTerminal = useCallback(
     (ip: string) => {
-      if (!ip.trim()) return;
+      const trimmed = ip.trim();
+      if (!trimmed) return;
+      // Validate IP format (IPv4 only)
+      const parts = trimmed.split('.');
+      const validIp = parts.length === 4 && parts.every(p => /^\d{1,3}$/.test(p) && +p >= 0 && +p <= 255);
+      if (!validIp) {
+        notify.error('Ungültige IP', 'Bitte eine gültige IPv4-Adresse eingeben');
+        return;
+      }
       if (!isConnected) {
         notify.error('Nicht verbunden', 'Terminal WebSocket ist nicht verbunden');
         return;

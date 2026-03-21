@@ -105,12 +105,15 @@ export function RemoteCommandModal({
   }, []);
 
   const commandString = useMemo(() => {
+    // Sanitize argument: only allow safe characters (alphanumeric, spaces, dots, hyphens, underscores)
+    const sanitizeArg = (arg: string) => arg.replace(/[^a-zA-Z0-9 ._-]/g, '');
+
     return commands
       .filter((c) => c.command)
       .map((c) => {
         const cmdDef = LINBO_COMMANDS.find((def) => def.value === c.command);
         if (cmdDef?.hasArg && c.arg) {
-          return `${c.command}:${c.arg}`;
+          return `${c.command}:${sanitizeArg(c.arg)}`;
         }
         return c.command;
       })
