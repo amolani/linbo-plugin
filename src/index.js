@@ -103,7 +103,7 @@ app.use(express.urlencoded({ extended: true }));
 
 // Add request ID for tracking
 app.use((req, res, next) => {
-  req.requestId = `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  req.requestId = `req_${Date.now()}_${require('crypto').randomBytes(6).toString('hex')}`;
   res.setHeader('X-Request-ID', req.requestId);
   next();
 });

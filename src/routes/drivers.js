@@ -41,8 +41,13 @@ async function cleanupTemp(filePath) {
 // Zod Schemas
 // =============================================================================
 
+function isValidIPv4(ip) {
+  const parts = ip.split('.');
+  return parts.length === 4 && parts.every(p => /^\d{1,3}$/.test(p) && +p >= 0 && +p <= 255);
+}
+
 const createProfileSchema = z.object({
-  hostIp: z.string().regex(/^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/, 'Invalid IPv4 address'),
+  hostIp: z.string().refine(isValidIPv4, 'Invalid IPv4 address (each octet must be 0-255)'),
 });
 
 const fileDeleteSchema = z.object({
@@ -107,19 +112,16 @@ router.post(
       const status = result.created ? 201 : 200;
       res.status(status).json({ data: result });
     } catch (error) {
+      // Sanitize SSH errors — don't leak internal details (paths, keys, config)
+      console.error(`[Drivers] SSH error for ${req.body.hostIp}:`, error.message);
       if (error.message === 'Command timeout') {
         return res.status(504).json({
-          error: { code: 'SSH_TIMEOUT', message: `SSH timeout connecting to ${req.body.hostIp}` },
+          error: { code: 'SSH_TIMEOUT', message: 'SSH connection timed out' },
         });
       }
-      if (error.statusCode === 502) {
+      if (error.statusCode === 502 || (error.message && (error.message.includes('SSH') || error.message.includes('Connection')))) {
         return res.status(502).json({
-          error: { code: 'SSH_FAILED', message: error.message },
-        });
-      }
-      if (error.message && error.message.includes('SSH') || error.message && error.message.includes('Connection')) {
-        return res.status(502).json({
-          error: { code: 'SSH_FAILED', message: `SSH connection to ${req.body.hostIp} failed: ${error.message}` },
+          error: { code: 'SSH_FAILED', message: 'SSH connection failed. Ensure the host is online and running LINBO.' },
         });
       }
       if (error.statusCode === 400) {
@@ -818,11 +820,18 @@ router.post(
  *       400: { description: Invalid IPv4 address }
  *       502: { description: SSH connection to client failed }
  */
-router.get('/hwinfo/:ip', authenticateToken, async (req, res, next) => {
+// Rate-limit expensive SSH scan operations (5/min per IP)
+const { rateLimit } = require('express-rate-limit');
+const hwinfoLimiter = rateLimit({
+  windowMs: 60 * 1000, limit: 5, standardHeaders: 'draft-7', legacyHeaders: false,
+  message: { error: { code: 'RATE_LIMITED', message: 'Too many hardware scan requests' } },
+});
+
+router.get('/hwinfo/:ip', authenticateToken, hwinfoLimiter, async (req, res, next) => {
   try {
     const { ip } = req.params;
-    if (!/^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(ip)) {
-      return res.status(400).json({ error: { code: 'VALIDATION_ERROR', message: 'Invalid IPv4 address' } });
+    if (!isValidIPv4(ip)) {
+      return res.status(400).json({ error: { code: 'VALIDATION_ERROR', message: 'Invalid IPv4 address (each octet 0-255)' } });
     }
 
     const refresh = req.query.refresh === 'true';

@@ -11,8 +11,13 @@ const ws = require('../../lib/websocket');
 const { z } = require('zod');
 const firmwareService = require('../../services/firmware.service');
 
+function isValidIPv4(ip) {
+  const parts = ip.split('.');
+  return parts.length === 4 && parts.every(p => /^\d{1,3}$/.test(p) && +p >= 0 && +p <= 255);
+}
+
 const firmwareDetectSchema = z.object({
-  hostIp: z.string().regex(/^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/, 'Invalid IPv4 address'),
+  hostIp: z.string().refine(isValidIPv4, 'Invalid IPv4 address (each octet must be 0-255)'),
 });
 
 const firmwareEntrySchema = z.object({

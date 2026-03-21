@@ -75,7 +75,7 @@ export function LoginPage() {
         </div>
 
         <p className="text-center text-sm text-muted-foreground">
-          Standard-Zugangsdaten: admin / admin
+          LINBO Plugin Administration
         </p>
       </div>
     </div>

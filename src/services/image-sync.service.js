@@ -384,9 +384,12 @@ async function _runDownload(jobId, imageName) {
       console.error(`[ImageSync] Failed ${imageName}:`, err.message);
     }
   } finally {
-    // Clean up in-memory refs
+    // Clean up in-memory refs — explicitly destroy stream to prevent partial writes
     activeAbort = null;
-    activeStream = null;
+    if (activeStream) {
+      try { activeStream.destroy(); } catch { /* ignore cleanup errors */ }
+      activeStream = null;
+    }
 
     // Release lock and process next
     await client.del(KEY.LOCK);

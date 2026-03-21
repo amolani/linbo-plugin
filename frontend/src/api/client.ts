@@ -82,6 +82,7 @@ async function refreshToken(): Promise<string | null> {
     // Use raw axios to avoid interceptor loop
     const res = await axios.post(`${API_BASE_URL}/auth/refresh`, null, {
       headers: { Authorization: `Bearer ${currentToken}` },
+      timeout: 8000,
     });
     const newToken = res.data?.data?.token;
     if (newToken) {

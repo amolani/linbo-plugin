@@ -53,6 +53,13 @@ router.delete('/sessions/:id', (req, res) => {
       error: { code: 'NOT_FOUND', message: 'Session not found' },
     });
   }
+  // Ownership check: only session owner or admin can close
+  const userId = req.user?.id || req.user?.username;
+  if (session.userId !== userId && req.user?.role !== 'admin') {
+    return res.status(403).json({
+      error: { code: 'FORBIDDEN', message: 'Cannot close another user\'s session' },
+    });
+  }
   terminalService.destroySession(req.params.id);
   res.json({ data: { message: 'Session closed' } });
 });

@@ -799,8 +799,9 @@ async function extractArchive(folderName, archivePath, originalName) {
       await execFileAsync('7z', ['x', `-o${tmpDir}`, '-aoa', archivePath], {
         maxBuffer: 10 * 1024 * 1024,
       });
-      // Validate: no extracted file escapes tmpDir
+      // Validate: no extracted file escapes tmpDir, remove symlinks before move
       await validateExtractedPaths(tmpDir);
+      await removeSymlinks(tmpDir);
       // Move contents to profileDir
       await moveContents(tmpDir, profileDir);
     } catch (err) {
@@ -901,8 +902,9 @@ async function extractArchive(folderName, archivePath, originalName) {
       await execFileAsync('unzip', ['-o', '-K', archivePath, '-d', tmpDir], {
         maxBuffer: 10 * 1024 * 1024,
       });
-      // Validate: no extracted file escapes tmpDir
+      // Validate: no extracted file escapes tmpDir, remove symlinks before move
       await validateExtractedPaths(tmpDir);
+      await removeSymlinks(tmpDir);
       // Move contents to profileDir
       await moveContents(tmpDir, profileDir);
     } catch (err) {
