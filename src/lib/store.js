@@ -823,6 +823,12 @@ async function flushToDisk(snapshotPath) {
   }
 
   const json = JSON.stringify(snap, null, 2);
+
+  // Keep one backup of the last good snapshot (recovery for corrupt writes)
+  try {
+    await fsp.copyFile(filePath, `${filePath}.bak`).catch(() => {});
+  } catch { /* backup is best-effort */ }
+
   await atomicWrite(filePath, encrypt(json));
 }
 
@@ -853,7 +859,16 @@ async function loadFromDisk(snapshotPath) {
     const plaintext = decrypt(raw);
     snap = JSON.parse(plaintext);
   } catch (err) {
-    console.warn('[Store] snapshot decrypt/parse failed:', err.message);
+    console.error('[Store] snapshot decrypt/parse failed:', err.message);
+    // Attempt backup recovery
+    try {
+      const bakRaw = await fsp.readFile(`${filePath}.bak`, 'utf8');
+      const bakPlain = decrypt(bakRaw);
+      snap = JSON.parse(bakPlain);
+      console.warn('[Store] recovered from backup snapshot');
+    } catch {
+      console.error('[Store] backup recovery also failed — starting with empty store');
+    }
     return;
   }
 
@@ -981,8 +996,26 @@ function gc() {
     }
   }
 
+  // Cleanup old operation hashes (ops:op:*) older than 7 days
+  const OP_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
+  const hashKeys = Array.from(_hashes.keys());
+  for (const key of hashKeys) {
+    if (!key.startsWith('ops:op:')) continue;
+    const hash = _hashes.get(key);
+    if (!hash) continue;
+    const createdAt = hash.get('createdAt');
+    if (createdAt && (now - new Date(createdAt).getTime()) > OP_MAX_AGE_MS) {
+      _hashes.delete(key);
+      _ttls.delete(key);
+      // Also delete associated sessions hash
+      _hashes.delete(`${key}:sessions`);
+      _ttls.delete(`${key}:sessions`);
+      evicted += 2;
+    }
+  }
+
   if (evicted > 0) {
-    console.debug(`[Store] GC: evicted ${evicted} expired keys`);
+    console.debug(`[Store] GC: evicted ${evicted} expired/old keys`);
   }
   return evicted;
 }

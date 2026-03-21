@@ -128,6 +128,20 @@ async function syncOnce() {
   try { ws.broadcast('sync.started', { timestamp: new Date().toISOString() }); } catch (err) { console.debug('[Sync] broadcast failed:', err.message); }
 
   try {
+    // 0. Pre-check disk space (min 100MB free on /srv/linbo)
+    try {
+      const { execFileAsync: _exec } = require('./sync.service')._testing || {};
+      const { statfs } = require('fs/promises');
+      const stats = await statfs(LINBO_DIR);
+      const freeBytes = stats.bfree * stats.bsize;
+      if (freeBytes < 100 * 1024 * 1024) {
+        throw new Error(`Insufficient disk space: ${Math.round(freeBytes / 1024 / 1024)}MB free on ${LINBO_DIR} (need 100MB)`);
+      }
+    } catch (spaceErr) {
+      if (spaceErr.message.includes('Insufficient disk')) throw spaceErr;
+      // statfs not available or dir missing — continue anyway
+    }
+
     // 1. Read cursor (empty = full snapshot)
     const cursor = await client.get(KEY.CURSOR) || '';
     const isFullSync = !cursor;

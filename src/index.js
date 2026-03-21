@@ -269,6 +269,24 @@ const HOST = process.env.HOST || '0.0.0.0';
 async function startServer() {
   log.info('Starting LINBO Plugin API Server (sync-only mode)...');
 
+  // PID lock — prevent dual instances from corrupting store.json
+  const pidFile = process.env.PID_FILE || '/var/run/linbo-api.pid';
+  try {
+    const fsPid = require('fs');
+    const existingPid = fsPid.existsSync(pidFile) && fsPid.readFileSync(pidFile, 'utf8').trim();
+    if (existingPid) {
+      try {
+        process.kill(parseInt(existingPid, 10), 0); // Check if process is running
+        console.error(`FATAL: Another instance is running (PID ${existingPid}). Remove ${pidFile} if stale.`);
+        process.exit(1);
+      } catch { /* Process not running — stale PID file, safe to overwrite */ }
+    }
+    fsPid.mkdirSync(require('path').dirname(pidFile), { recursive: true });
+    fsPid.writeFileSync(pidFile, String(process.pid));
+  } catch (err) {
+    if (err.code !== 'EACCES') console.warn('[PID] Could not write PID file:', err.message);
+  }
+
   // Validate secrets before proceeding
   validateSecrets();
 
@@ -844,6 +862,9 @@ async function shutdown(signal) {
     } catch (err) {
       console.error('Store flush error:', err.message);
     }
+
+    // Clean up PID file
+    try { require('fs').unlinkSync(process.env.PID_FILE || '/var/run/linbo-api.pid'); } catch {}
 
     console.log('Graceful shutdown complete');
     process.exit(0);
