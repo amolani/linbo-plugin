@@ -672,24 +672,115 @@ fix_etc_hosts() {
 }
 
 # =============================================================================
-# 13. Enable services
+# 13. Deploy API + systemd units
 # =============================================================================
-enable_services() {
-    log_info "Enabling services..."
-    if systemctl list-unit-files "nginx.service" &>/dev/null; then
-        systemctl enable --now nginx && log_ok "nginx enabled and started"
-    else
-        log_warn "nginx.service unit not found"
-    fi
-    log_info "linbo-api.service will be created and enabled in Phase 2 (systemd units)"
+deploy_api() {
+    log_info "Deploying API to /srv/linbo-api..."
+
+    rsync -a --delete \
+        --exclude=node_modules --exclude=.git --exclude=tests \
+        --exclude=frontend --exclude='*.md' --exclude='.planning' \
+        "$SCRIPT_DIR/" /srv/linbo-api/
+
+    cd /srv/linbo-api && npm install --production --silent 2>&1 | tail -1
+    chown -R linbo:linbo /srv/linbo-api
+    log_ok "API deployed to /srv/linbo-api"
+
+    # systemd units
+    cp "$SCRIPT_DIR/systemd/linbo-api.service" /etc/systemd/system/
+    cp "$SCRIPT_DIR/systemd/linbo-setup.service" /etc/systemd/system/
+    cp "$SCRIPT_DIR/scripts/setup-bootfiles.sh" /usr/local/bin/
+    chmod +x /usr/local/bin/setup-bootfiles.sh
+    systemctl daemon-reload
+    systemctl enable linbo-api linbo-setup 2>/dev/null
+    log_ok "systemd units installed and enabled"
 }
 
 # =============================================================================
-# 14. Summary
+# 14. Deploy frontend + nginx
+# =============================================================================
+deploy_frontend() {
+    log_info "Deploying frontend..."
+
+    local dist_dir="$SCRIPT_DIR/frontend/dist"
+    if [[ -d "$dist_dir" && -f "$dist_dir/index.html" ]]; then
+        mkdir -p /var/www/linbo
+        cp -r "$dist_dir"/* /var/www/linbo/
+        log_ok "Frontend deployed to /var/www/linbo"
+    else
+        log_warn "No frontend build at $dist_dir — UI won't be available"
+        log_warn "Build with: cd frontend && npm run build"
+    fi
+
+    # nginx site config (idempotent — skip if already exists)
+    if [[ ! -f /etc/nginx/sites-available/linbo ]]; then
+        cat > /etc/nginx/sites-available/linbo << 'NGINXEOF'
+server {
+    listen 80 default_server;
+    server_name _;
+    root /var/www/linbo;
+    index index.html;
+
+    location /api/ {
+        proxy_pass http://127.0.0.1:3000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    }
+
+    location /ws {
+        proxy_pass http://127.0.0.1:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+    }
+
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+}
+NGINXEOF
+        log_ok "nginx site config created"
+    else
+        log_ok "nginx site config already exists"
+    fi
+
+    ln -sf /etc/nginx/sites-available/linbo /etc/nginx/sites-enabled/
+    rm -f /etc/nginx/sites-enabled/default
+
+    if nginx -t 2>/dev/null; then
+        systemctl reload nginx
+        log_ok "nginx configured and reloaded"
+    else
+        log_warn "nginx config test failed — check /etc/nginx/sites-available/linbo"
+    fi
+}
+
+# =============================================================================
+# 15. Start services
+# =============================================================================
+enable_services() {
+    log_info "Starting services..."
+    systemctl enable --now nginx 2>/dev/null && log_ok "nginx running" || log_warn "nginx start failed"
+
+    systemctl start linbo-setup 2>/dev/null || true
+    systemctl start linbo-api 2>/dev/null
+
+    sleep 2
+    if systemctl is-active --quiet linbo-api; then
+        log_ok "linbo-api running"
+    else
+        log_warn "linbo-api failed to start — check: journalctl -u linbo-api"
+    fi
+}
+
+# =============================================================================
+# 16. Summary
 # =============================================================================
 print_summary() {
     echo ""
-    local nginx_status
+    local api_status nginx_status
+    api_status=$(systemctl is-active linbo-api 2>/dev/null || echo "not running")
     nginx_status=$(systemctl is-active nginx 2>/dev/null || echo "not running")
 
     echo ""
@@ -710,20 +801,15 @@ print_summary() {
         echo "  Sync:            disabled (offline mode)"
     fi
     echo "  Admin login:     admin / Muster!"
+    echo "  API:             ${api_status} (http://localhost:3000)"
     echo "  nginx:           ${nginx_status}"
+    echo "  UI:              http://${LINBO_SERVER_IP}/"
+    echo "  Health:          http://${LINBO_SERVER_IP}/health"
     echo "  .env:            /etc/linbo-native/.env"
-    echo "  setup.ini:       /var/lib/linuxmuster/setup.ini"
-    echo ""
-    echo "  Next steps:"
-    echo "    Run Phase 2 to create systemd units (linbo-api.service)"
-    echo ""
-    if [[ "$SYNC_ENABLED" == "true" ]]; then
-        echo "  After Phase 2, open: http://${LINBO_SERVER_IP}"
-    fi
     echo ""
 
     if [[ "$PORT_WARNINGS" -gt 0 ]]; then
-        log_warn "Resolve $PORT_WARNINGS port conflict(s) before starting!"
+        log_warn "Resolve $PORT_WARNINGS port conflict(s)!"
         echo ""
     fi
 }
@@ -745,6 +831,8 @@ main() {
     write_env
     generate_setup_ini
     fix_etc_hosts
+    deploy_api
+    deploy_frontend
     enable_services
     print_summary
 }
