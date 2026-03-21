@@ -8,11 +8,51 @@
 
 const fs = require('fs').promises;
 const path = require('path');
+const os = require('os');
 const { DRIVERS_BASE, sanitizeName, sanitizeRelativePath, resolveAndValidate, MAX_ZIP_ENTRIES, MAX_ZIP_SIZE } = require('../lib/driver-path');
 const { IMAGES_DIR, IMAGE_EXTS } = require('../lib/image-path');
 const { listDirRecursive, countFiles, getDirSize, removeSymlinks } = require('../lib/driver-fs');
 const sshService = require('./ssh.service');
 const ws = require('../lib/websocket');
+
+/**
+ * Walk a directory recursively and verify no file resolves outside the root.
+ * Throws with statusCode 400 on path traversal detection.
+ */
+async function validateExtractedPaths(rootDir) {
+  const resolvedRoot = path.resolve(rootDir);
+  const entries = await listDirRecursive(rootDir);
+  for (const entry of entries) {
+    const resolved = path.resolve(rootDir, entry);
+    if (!resolved.startsWith(resolvedRoot + path.sep) && resolved !== resolvedRoot) {
+      throw Object.assign(
+        new Error(`Path traversal detected in extracted file: ${entry}`),
+        { statusCode: 400 }
+      );
+    }
+  }
+}
+
+/**
+ * Move all contents from srcDir into destDir (merging).
+ */
+async function moveContents(srcDir, destDir) {
+  await fs.mkdir(destDir, { recursive: true });
+  const entries = await fs.readdir(srcDir, { withFileTypes: true });
+  for (const entry of entries) {
+    const src = path.join(srcDir, entry.name);
+    const dest = path.join(destDir, entry.name);
+    if (entry.isDirectory()) {
+      await moveContents(src, dest);
+    } else {
+      await fs.rename(src, dest).catch(async () => {
+        // rename fails across filesystems — fallback to copy+delete
+        await fs.copyFile(src, dest);
+        await fs.unlink(src);
+      });
+    }
+  }
+}
 
 // =============================================================================
 // Match.conf Parsing
@@ -753,15 +793,24 @@ async function extractArchive(folderName, archivePath, originalName) {
       );
     }
 
+    // Extract to temp dir first, then validate paths and move (defense-in-depth)
+    const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'linbo-extract-'));
     try {
-      await execFileAsync('7z', ['x', `-o${profileDir}`, '-aoa', archivePath], {
+      await execFileAsync('7z', ['x', `-o${tmpDir}`, '-aoa', archivePath], {
         maxBuffer: 10 * 1024 * 1024,
       });
+      // Validate: no extracted file escapes tmpDir
+      await validateExtractedPaths(tmpDir);
+      // Move contents to profileDir
+      await moveContents(tmpDir, profileDir);
     } catch (err) {
+      if (err.statusCode) throw err;
       throw Object.assign(
         new Error('Archive extraction failed: ' + (err.stderr || err.message)),
         { statusCode: 500 }
       );
+    } finally {
+      await fs.rm(tmpDir, { recursive: true, force: true }).catch(() => {});
     }
 
     // Inno Setup .exe detection
@@ -846,15 +895,24 @@ async function extractArchive(folderName, archivePath, originalName) {
       );
     }
 
+    // Extract to temp dir first, then validate paths and move (defense-in-depth)
+    const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'linbo-extract-'));
     try {
-      await execFileAsync('unzip', ['-o', '-K', archivePath, '-d', profileDir], {
+      await execFileAsync('unzip', ['-o', '-K', archivePath, '-d', tmpDir], {
         maxBuffer: 10 * 1024 * 1024,
       });
+      // Validate: no extracted file escapes tmpDir
+      await validateExtractedPaths(tmpDir);
+      // Move contents to profileDir
+      await moveContents(tmpDir, profileDir);
     } catch (err) {
+      if (err.statusCode) throw err;
       throw Object.assign(
         new Error('ZIP extraction failed: ' + (err.stderr || err.message)),
         { statusCode: 500 }
       );
+    } finally {
+      await fs.rm(tmpDir, { recursive: true, force: true }).catch(() => {});
     }
   }
 

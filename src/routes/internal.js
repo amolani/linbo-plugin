@@ -5,6 +5,7 @@
  */
 
 const express = require('express');
+const crypto = require('crypto');
 const router = express.Router();
 
 // Once-flag: suppress repeated Redis host lookup warnings
@@ -13,7 +14,10 @@ const ws = require('../lib/websocket');
 const redisLib = require('../lib/redis');
 
 // Internal API key for service-to-service authentication
-const INTERNAL_API_KEY = process.env.INTERNAL_API_KEY || 'linbo-internal-secret';
+const INTERNAL_API_KEY = process.env.INTERNAL_API_KEY;
+if (!INTERNAL_API_KEY) {
+  throw new Error('FATAL: INTERNAL_API_KEY environment variable is not set. Cannot start without it.');
+}
 
 /**
  * Middleware to authenticate internal requests
@@ -21,7 +25,9 @@ const INTERNAL_API_KEY = process.env.INTERNAL_API_KEY || 'linbo-internal-secret'
 function authenticateInternal(req, res, next) {
   const apiKey = req.headers['x-internal-key'];
 
-  if (!apiKey || apiKey !== INTERNAL_API_KEY) {
+  const keyMatch = apiKey && apiKey.length === INTERNAL_API_KEY.length &&
+    crypto.timingSafeEqual(Buffer.from(apiKey), Buffer.from(INTERNAL_API_KEY));
+  if (!keyMatch) {
     return res.status(401).json({
       error: {
         code: 'UNAUTHORIZED',

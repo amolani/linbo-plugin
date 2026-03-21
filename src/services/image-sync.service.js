@@ -685,6 +685,16 @@ async function recoverOnStartup() {
   }
 }
 
+/**
+ * Abort any active download (used during graceful shutdown).
+ */
+function abortActive() {
+  if (activeAbort) {
+    activeAbort.abort();
+    console.log('[ImageSync] Active download aborted for shutdown');
+  }
+}
+
 module.exports = {
   getRemoteManifest,
   getLocalImages,
@@ -693,4 +703,5 @@ module.exports = {
   getQueue,
   cancelJob,
   recoverOnStartup,
+  abortActive,
 };

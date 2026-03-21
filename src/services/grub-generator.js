@@ -13,6 +13,7 @@
 
 const fs = require('fs').promises;
 const path = require('path');
+const redis = require('../lib/redis');
 const { atomicWrite } = require('../lib/atomic-write');
 const { forceSymlink, safeUnlink } = require('../lib/atomic-write');
 
@@ -288,6 +289,16 @@ async function generateMainGrub(hosts, configs, options = {}) {
  * @returns {Promise<{configs: number, hosts: number, hostcfgMac: number}>}
  */
 async function regenerateAll(hosts, configs, options = {}) {
+  // Prevent concurrent regeneration
+  const client = redis.getClient();
+  const lockKey = 'grub:regen:lock';
+  const locked = await client.set(lockKey, '1', 'NX', 'EX', 120); // 2 min TTL
+  if (!locked) {
+    console.warn('[GrubGenerator] Regeneration already in progress, skipping');
+    return { configs: 0, hosts: 0, hostcfgMac: 0 };
+  }
+
+  try {
   await fs.mkdir(GRUB_DIR, { recursive: true });
   await fs.mkdir(HOSTCFG_DIR, { recursive: true });
 
@@ -355,6 +366,9 @@ async function regenerateAll(hosts, configs, options = {}) {
   console.log(`[GrubGenerator] Regenerated: ${configCount} configs, ${hostCount} hostname symlinks, ${hostcfgMacCount} MAC symlinks`);
 
   return { configs: configCount, hosts: hostCount, hostcfgMac: hostcfgMacCount };
+  } finally {
+    await client.del(lockKey);
+  }
 }
 
 module.exports = {

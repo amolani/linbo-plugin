@@ -34,10 +34,14 @@ const { verifyToken } = require('./middleware/auth');
 function verifyWsToken(token) {
   if (!token) return null;
 
-  // Check INTERNAL_API_KEY first (plain string comparison)
+  // Check INTERNAL_API_KEY first (timing-safe comparison)
   const internalKey = process.env.INTERNAL_API_KEY;
-  if (internalKey && token === internalKey) {
-    return { id: 'internal', username: 'internal-service', role: 'admin' };
+  if (internalKey && token.length === internalKey.length) {
+    try {
+      if (require('crypto').timingSafeEqual(Buffer.from(token), Buffer.from(internalKey))) {
+        return { id: 'internal', username: 'internal-service', role: 'admin' };
+      }
+    } catch { /* length mismatch or encoding issue — fall through to JWT */ }
   }
 
   // Then try JWT verification
@@ -564,10 +568,14 @@ async function startServer() {
 
   // Host Status Worker (port-scan hosts from Redis sync cache)
   if (process.env.HOST_STATUS_WORKER !== 'false') {
-    const hostStatusWorker = require('./workers/host-status.worker');
-    hostStatusWorker.startWorker();
-    console.log('  Host Status Worker started');
-    server._hostStatusWorker = hostStatusWorker;
+    try {
+      const hostStatusWorker = require('./workers/host-status.worker');
+      hostStatusWorker.startWorker();
+      console.log('  Host Status Worker started');
+      server._hostStatusWorker = hostStatusWorker;
+    } catch (err) {
+      console.error('  Host Status Worker failed to start:', err.message);
+    }
   }
 
   // Ensure gui/ symlinks exist (needed for new LINBO client versions)
@@ -692,6 +700,18 @@ async function startServer() {
     console.warn('  Auto-rebuild check failed:', err.message);
   }
 
+  // Periodic store snapshot (every 5 minutes) — protects against data loss on crash
+  const STORE_SAVE_INTERVAL = parseInt(process.env.STORE_SAVE_INTERVAL, 10) || 5 * 60 * 1000;
+  const store = require('./lib/store');
+  const storeAutoSave = setInterval(async () => {
+    try {
+      await store.flushToDisk();
+    } catch (err) {
+      console.error('[Store] auto-save failed:', err.message);
+    }
+  }, STORE_SAVE_INTERVAL);
+  storeAutoSave.unref(); // Don't keep process alive just for auto-save
+
   // Start HTTP server
   server.listen(PORT, HOST, () => {
     console.log(`
@@ -719,6 +739,14 @@ async function shutdown(signal) {
     if (server._hostStatusWorker) {
       server._hostStatusWorker.stopWorker();
       console.log('Host Status Worker stopped');
+    }
+
+    // Abort active image sync downloads
+    try {
+      const imageSyncService = require('./services/image-sync.service');
+      imageSyncService.abortActive();
+    } catch (err) {
+      console.debug('[Shutdown] image sync cleanup:', err.message);
     }
 
     // Close terminal sessions
@@ -777,6 +805,7 @@ process.on('uncaughtException', (err) => {
 
 process.on('unhandledRejection', (reason, promise) => {
   console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+  shutdown('unhandledRejection');
 });
 
 // Start the server

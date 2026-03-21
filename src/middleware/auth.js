@@ -6,8 +6,23 @@
 
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'linbo-docker-secret-change-in-production';
+/**
+ * Timing-safe string comparison to prevent timing attacks on API keys.
+ */
+function timingSafeEqual(a, b) {
+  if (typeof a !== 'string' || typeof b !== 'string') return false;
+  const bufA = Buffer.from(a);
+  const bufB = Buffer.from(b);
+  if (bufA.length !== bufB.length) return false;
+  return crypto.timingSafeEqual(bufA, bufB);
+}
+
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+  throw new Error('FATAL: JWT_SECRET environment variable is not set. Cannot start without it.');
+}
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '24h';
 
 /**
@@ -65,7 +80,7 @@ function authenticateToken(req, res, next) {
   if (!token) {
     const internalKeyHeader = req.headers['x-internal-key'];
     const internalKey = process.env.INTERNAL_API_KEY;
-    if (internalKey && internalKeyHeader && internalKeyHeader === internalKey) {
+    if (internalKey && internalKeyHeader && timingSafeEqual(internalKeyHeader, internalKey)) {
       req.user = { id: 'internal', username: 'internal-service', role: 'admin' };
       return next();
     }
@@ -79,7 +94,7 @@ function authenticateToken(req, res, next) {
 
   // Check for internal API key as Bearer token (existing behavior)
   const internalKey = process.env.INTERNAL_API_KEY;
-  if (internalKey && token === internalKey) {
+  if (internalKey && timingSafeEqual(token, internalKey)) {
     req.user = { id: 'internal', username: 'internal-service', role: 'admin' };
     return next();
   }

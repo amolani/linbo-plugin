@@ -8,6 +8,7 @@ const util = require('util');
 const fs = require('fs').promises;
 const path = require('path');
 const execAsync = util.promisify(exec);
+const redis = require('../lib/redis');
 
 const UPDATE_SCRIPT = process.env.UPDATE_LINBOFS_SCRIPT || '/usr/sbin/update-linbofs';
 const LINBO_DIR = process.env.LINBO_DIR || '/srv/linbo';
@@ -66,20 +67,28 @@ async function rotateBuildLogs() {
  * @returns {Promise<{success: boolean, output: string, errors: string|null, duration: number}>}
  */
 async function updateLinbofs(options = {}) {
+  // Prevent concurrent updates — acquire exclusive lock
+  const client = redis.getClient();
+  const lockKey = 'linbofs:update:lock';
+  const locked = await client.set(lockKey, '1', 'NX', 'EX', 600); // 10 min TTL
+  if (!locked) {
+    return { success: false, errors: 'linbofs update already in progress' };
+  }
+
   const startTime = Date.now();
 
-  // Rotate old build logs before starting
-  await rotateBuildLogs();
-
-  const env = {
-    ...process.env,
-    LINBO_DIR: options.linboDir || LINBO_DIR,
-    CONFIG_DIR: options.configDir || CONFIG_DIR,
-    RSYNC_SECRETS: options.rsyncSecrets || '/etc/rsyncd.secrets',
-    ...(options.env || {}),
-  };
-
   try {
+    // Rotate old build logs before starting
+    await rotateBuildLogs();
+
+    const env = {
+      ...process.env,
+      LINBO_DIR: options.linboDir || LINBO_DIR,
+      CONFIG_DIR: options.configDir || CONFIG_DIR,
+      RSYNC_SECRETS: options.rsyncSecrets || '/etc/rsyncd.secrets',
+      ...(options.env || {}),
+    };
+
     // Check if script exists
     try {
       await fs.access(UPDATE_SCRIPT, fs.constants.X_OK);
@@ -121,6 +130,8 @@ async function updateLinbofs(options = {}) {
       errors: error.stderr || error.message,
       duration,
     };
+  } finally {
+    await client.del(lockKey);
   }
 }
 

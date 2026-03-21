@@ -25,16 +25,10 @@ const {
   sanitizeHostname,
 } = syncOps;
 
-// Auth middleware (Prisma-optional, same pattern as sync.js)
-let authenticate, requireAdmin;
-try {
-  const auth = require('../middleware/auth');
-  authenticate = auth.authenticateToken;
-  requireAdmin = auth.requireRole(['admin']);
-} catch {
-  authenticate = (req, res, next) => next();
-  requireAdmin = (req, res, next) => next();
-}
+// Auth middleware
+const auth = require('../middleware/auth');
+const authenticate = auth.authenticateToken;
+const requireAdmin = auth.requireRole(['admin']);
 
 // All routes require authentication
 router.use(authenticate);

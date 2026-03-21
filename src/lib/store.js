@@ -33,6 +33,8 @@ const VOLATILE_KEY_PATTERNS = [
   /^ops:/,
   /^sync:isRunning$/,
   /^linbo:update:lock$/,
+  /^linbofs:update:lock$/,
+  /^grub:regen:lock$/,
   /^imgsync:lock$/,
   /^imgpush:lock$/,
   /^rl:/,
@@ -869,6 +871,8 @@ async function loadFromDisk(snapshotPath) {
   // Always clear lock keys after restore (crash recovery — Pitfall 3)
   _strings.delete('sync:isRunning');
   _strings.delete('linbo:update:lock');
+  _strings.delete('linbofs:update:lock');
+  _strings.delete('grub:regen:lock');
   _strings.delete('imgsync:lock');
   _strings.delete('imgpush:lock');
 }

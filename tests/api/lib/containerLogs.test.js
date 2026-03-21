@@ -95,12 +95,14 @@ describe('containerLogs — Phase 5 requirements', () => {
   // =========================================================================
   describe('containerLogs module degrades gracefully without journalctl (API-08)', () => {
     let containerLogs;
+    // Capture original before mocking to avoid recursive mock calls
+    const originalExistsSync = fs.existsSync.bind(fs);
 
     beforeAll(() => {
       // Mock fs.existsSync to simulate missing journalctl
       jest.spyOn(fs, 'existsSync').mockImplementation((p) => {
         if (p === '/usr/bin/journalctl') return false;
-        return jest.requireActual('fs').existsSync(p);
+        return originalExistsSync(p);
       });
       // Clear any cached version and require fresh
       const modPath = require.resolve('../../../src/lib/containerLogs');

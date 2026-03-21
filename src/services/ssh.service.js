@@ -232,6 +232,21 @@ async function testConnection(host, options = {}) {
   }
 }
 
+// Validation patterns for shell-safe parameters
+const SAFE_OSNAME_RE = /^[A-Za-z0-9 ._-]{1,100}$/;
+const SAFE_PARTITION_RE = /^\/dev\/[a-z]{2,8}[0-9]{1,3}$/;
+const SAFE_DOWNLOAD_TYPE_RE = /^(rsync|multicast|torrent)$/;
+
+/**
+ * Validate a parameter is safe for shell interpolation.
+ * @throws {Error} if value contains shell metacharacters
+ */
+function validateShellParam(value, name, pattern) {
+  if (!pattern.test(value)) {
+    throw new Error(`Invalid ${name}: "${value}" does not match expected format`);
+  }
+}
+
 /**
  * Execute LINBO command on host
  * @param {string} host - Hostname or IP address
@@ -247,12 +262,18 @@ async function executeLinboCommand(host, linboCommand, params = {}) {
         ? 'linbo_cmd synconly -f'
         : 'linbo_cmd synconly';
       if (params.osName) {
+        validateShellParam(params.osName, 'osName', SAFE_OSNAME_RE);
         command += ` ${params.osName}`;
       }
       break;
 
     case 'start':
-      command = `linbo_cmd start ${params.osName || ''}`.trim();
+      if (params.osName) {
+        validateShellParam(params.osName, 'osName', SAFE_OSNAME_RE);
+        command = `linbo_cmd start ${params.osName}`;
+      } else {
+        command = 'linbo_cmd start';
+      }
       break;
 
     case 'reboot':
@@ -268,9 +289,12 @@ async function executeLinboCommand(host, linboCommand, params = {}) {
       break;
 
     case 'initcache':
-      command = params.downloadType
-        ? `linbo_cmd initcache ${params.downloadType}`
-        : 'linbo_cmd initcache';
+      if (params.downloadType) {
+        validateShellParam(params.downloadType, 'downloadType', SAFE_DOWNLOAD_TYPE_RE);
+        command = `linbo_cmd initcache ${params.downloadType}`;
+      } else {
+        command = 'linbo_cmd initcache';
+      }
       break;
 
     case 'partition':
@@ -278,9 +302,12 @@ async function executeLinboCommand(host, linboCommand, params = {}) {
       break;
 
     case 'format':
-      command = params.partition
-        ? `linbo_cmd format ${params.partition}`
-        : 'linbo_cmd format';
+      if (params.partition) {
+        validateShellParam(params.partition, 'partition', SAFE_PARTITION_RE);
+        command = `linbo_cmd format ${params.partition}`;
+      } else {
+        command = 'linbo_cmd format';
+      }
       break;
 
     default:
