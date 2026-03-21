@@ -6,6 +6,14 @@
 
 set -euo pipefail
 
+# Prevent concurrent setup.sh runs
+LOCK_FILE="/var/run/linbo-setup.lock"
+exec 200>"$LOCK_FILE"
+if ! flock -n 200; then
+    echo "ERROR: Another setup.sh instance is already running. Exiting."
+    exit 1
+fi
+
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
 # =============================================================================
@@ -461,8 +469,8 @@ _ensure_linbo_ssh_key() {
 
     # Grant linbo group write access to /etc/linuxmuster/linbo/ for kernel state, rebuild locks
     chown root:linbo /etc/linuxmuster/linbo
-    chmod 775 /etc/linuxmuster/linbo
-    log_ok "Permissions set: /etc/linuxmuster/linbo (775 root:linbo)"
+    chmod 755 /etc/linuxmuster/linbo
+    log_ok "Permissions set: /etc/linuxmuster/linbo (755 root:linbo)"
 }
 
 # =============================================================================
@@ -512,10 +520,17 @@ write_env() {
     local timestamp
     timestamp=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 
+    # Preserve existing secrets on re-run (avoids JWT invalidation)
     local jwt_secret internal_key rsync_pw
-    jwt_secret=$(generate_secret jwt)
-    internal_key=$(generate_secret api_key)
-    rsync_pw=$(generate_secret password)
+    if [[ -f "$env_file" ]]; then
+        jwt_secret=$(grep '^JWT_SECRET=' "$env_file" 2>/dev/null | cut -d= -f2- | tr -d '"'"'"' ' || true)
+        internal_key=$(grep '^INTERNAL_API_KEY=' "$env_file" 2>/dev/null | cut -d= -f2- | tr -d '"'"'"' ' || true)
+        rsync_pw=$(grep '^RSYNC_PASSWORD=' "$env_file" 2>/dev/null | cut -d= -f2- | tr -d '"'"'"' ' || true)
+    fi
+    # Generate only if not already set
+    [[ -z "$jwt_secret" ]] && jwt_secret=$(generate_secret jwt)
+    [[ -z "$internal_key" ]] && internal_key=$(generate_secret api_key)
+    [[ -z "$rsync_pw" ]] && rsync_pw=$(generate_secret password)
 
     cat > "$env_file" << ENVEOF
 # LINBO Native - Environment Configuration
@@ -556,7 +571,9 @@ ADMIN_USERNAME=admin
 ADMIN_PASSWORD=Muster!
 
 # === TLS ===
-NODE_TLS_REJECT_UNAUTHORIZED=0
+# Only disable cert verification when connecting to LMN server (self-signed certs)
+NODE_TLS_REJECT_UNAUTHORIZED=${SYNC_ENABLED:+0}
+NODE_TLS_REJECT_UNAUTHORIZED=${NODE_TLS_REJECT_UNAUTHORIZED:-1}
 
 # === SSH ===
 LINBO_CLIENT_SSH_KEY=/etc/linuxmuster/linbo/ssh_host_rsa_key_client
@@ -682,7 +699,11 @@ deploy_api() {
         --exclude=frontend --exclude='*.md' --exclude='.planning' \
         "$SCRIPT_DIR/" /srv/linbo-api/
 
-    cd /srv/linbo-api && npm install --production --silent 2>&1 | tail -1
+    cd /srv/linbo-api
+    if ! npm install --production --loglevel error 2>&1; then
+        log_warn "npm install failed — check network and retry: cd /srv/linbo-api && npm install --production"
+        return 1
+    fi
     chown -R linbo:linbo /srv/linbo-api
     log_ok "API deployed to /srv/linbo-api"
 

@@ -33,8 +33,8 @@ const ipAddressSchema = z.string().regex(
 // =============================================================================
 
 const loginSchema = z.object({
-  username: z.string().min(1, 'Username is required'),
-  password: z.string().min(1, 'Password is required'),
+  username: z.string().min(1, 'Username is required').max(255),
+  password: z.string().min(1, 'Password is required').max(256),
 });
 
 // =============================================================================

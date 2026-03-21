@@ -100,8 +100,10 @@ log_ok "rsync.service drop-in written"
 if [[ -f "$ENV_FILE" ]]; then
     rsync_pw=$(grep '^RSYNC_PASSWORD=' "$ENV_FILE" | cut -d= -f2- | tr -d '"'"'"' ')
     if [[ -n "$rsync_pw" ]]; then
-        echo "linbo:${rsync_pw}" > "$RSYNCD_SECRETS"
-        chmod 600 "$RSYNCD_SECRETS"
+        # Atomic write: create with secure permissions, then rename
+        install -m 600 /dev/null "${RSYNCD_SECRETS}.tmp"
+        echo "linbo:${rsync_pw}" > "${RSYNCD_SECRETS}.tmp"
+        mv "${RSYNCD_SECRETS}.tmp" "$RSYNCD_SECRETS"
         log_ok "rsyncd.secrets written (chmod 600)"
     else
         log_warn "RSYNC_PASSWORD not found in $ENV_FILE — rsyncd.secrets not written"
