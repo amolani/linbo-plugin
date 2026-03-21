@@ -77,6 +77,11 @@ async function updateLinbofs(options = {}) {
 
   const startTime = Date.now();
 
+  // Heartbeat: refresh lock TTL every 60s while rebuild runs (prevents TTL expiry during long builds)
+  const lockHeartbeat = setInterval(async () => {
+    try { await client.expire(lockKey, 600); } catch { /* ignore */ }
+  }, 60000);
+
   try {
     // Rotate old build logs before starting
     await rotateBuildLogs();
@@ -131,6 +136,7 @@ async function updateLinbofs(options = {}) {
       duration,
     };
   } finally {
+    clearInterval(lockHeartbeat);
     await client.del(lockKey);
   }
 }

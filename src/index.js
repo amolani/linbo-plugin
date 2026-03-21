@@ -758,18 +758,18 @@ async function startServer() {
   // Periodic store snapshot (every 5 minutes) — protects against data loss on crash
   const STORE_SAVE_INTERVAL = parseInt(process.env.STORE_SAVE_INTERVAL, 10) || 5 * 60 * 1000;
   const store = require('./lib/store');
-  const storeAutoSave = setInterval(async () => {
+  server._storeAutoSave = setInterval(async () => {
     try {
       await store.flushToDisk();
     } catch (err) {
       console.error('[Store] auto-save failed:', err.message);
     }
   }, STORE_SAVE_INTERVAL);
-  storeAutoSave.unref(); // Don't keep process alive just for auto-save
+  server._storeAutoSave.unref();
 
   // Active GC pass (every 15 minutes) — evicts expired keys to prevent unbounded growth
-  const storeGcTimer = setInterval(() => { store.gc(); }, 15 * 60 * 1000);
-  storeGcTimer.unref();
+  server._storeGcTimer = setInterval(() => { store.gc(); }, 15 * 60 * 1000);
+  server._storeGcTimer.unref();
 
   // Start HTTP server
   server.listen(PORT, HOST, () => {
@@ -790,6 +790,10 @@ LINBO Plugin API Server (sync-only)
 // =============================================================================
 async function shutdown(signal) {
   console.log(`\nReceived ${signal}. Starting graceful shutdown...`);
+
+  // Clear background timers immediately
+  if (server._storeAutoSave) clearInterval(server._storeAutoSave);
+  if (server._storeGcTimer) clearInterval(server._storeGcTimer);
 
   server.close(async () => {
     console.log('HTTP server closed');

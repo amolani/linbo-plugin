@@ -154,6 +154,17 @@ async function subscribe(serviceName, ws) {
       batchTimer: null,
     };
 
+    // Attach error/close handlers BEFORE registering in activeStreams
+    // to prevent zombie processes if spawn fails immediately
+    proc.on('error', (err) => {
+      console.error(`[containerLogs] Stream error for ${serviceName}:`, err.message);
+      cleanup(serviceName);
+    });
+
+    proc.on('close', () => {
+      cleanup(serviceName);
+    });
+
     activeStreams.set(serviceName, streamInfo);
 
     let buffer = '';
@@ -191,14 +202,6 @@ async function subscribe(serviceName, ws) {
       }
     });
 
-    proc.on('error', (err) => {
-      console.error(`[containerLogs] Stream error for ${serviceName}:`, err.message);
-      cleanup(serviceName);
-    });
-
-    proc.on('close', () => {
-      cleanup(serviceName);
-    });
   } catch (err) {
     console.error(`[containerLogs] subscribe(${serviceName}) error:`, err.message);
   }

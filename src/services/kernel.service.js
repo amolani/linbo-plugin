@@ -7,6 +7,7 @@ const fs = require('fs').promises;
 const path = require('path');
 const { execFile } = require('child_process');
 const { promisify } = require('util');
+const redis = require('../lib/redis');
 
 const execFileAsync = promisify(execFile);
 
@@ -247,9 +248,10 @@ async function switchKernel(variant) {
     throw Object.assign(new Error(`Invalid variant: ${variant}`), { statusCode: 400 });
   }
 
-  // Check if rebuild already running
-  const state = await readKernelState();
-  if (state.rebuildStatus === 'running') {
+  // Check if rebuild already running (store-based lock, survives race conditions)
+  const storeClient = redis.getClient();
+  const kernelLock = await storeClient.set('kernel:switch:lock', '1', 'NX', 'EX', 600);
+  if (!kernelLock) {
     throw Object.assign(new Error('Kernel rebuild already in progress'), { statusCode: 409 });
   }
 
@@ -286,11 +288,15 @@ async function switchKernel(variant) {
     lastError: null,
   });
 
-  // Trigger rebuild asynchronously
-  triggerRebuild(variant, jobId).catch(async (err) => {
-    console.error(`[Kernel] Rebuild failed for ${variant}:`, err.message);
-    await writeKernelState({ rebuildStatus: 'failed', lastError: err.message }).catch(() => {});
-  });
+  // Trigger rebuild asynchronously (lock released when done)
+  triggerRebuild(variant, jobId)
+    .catch(async (err) => {
+      console.error(`[Kernel] Rebuild failed for ${variant}:`, err.message);
+      await writeKernelState({ rebuildStatus: 'failed', lastError: err.message }).catch(() => {});
+    })
+    .finally(async () => {
+      await storeClient.del('kernel:switch:lock').catch(() => {});
+    });
 
   return { jobId, startedAt, requestedVariant: variant };
 }

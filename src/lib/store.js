@@ -77,6 +77,7 @@ const VOLATILE_KEY_PATTERNS = [
   /^linbo:update:lock$/,
   /^linbofs:update:lock$/,
   /^grub:regen:lock$/,
+  /^kernel:switch:lock$/,
   /^imgsync:lock$/,
   /^imgpush:lock$/,
   /^rl:/,
@@ -917,6 +918,7 @@ async function loadFromDisk(snapshotPath) {
   _strings.delete('linbo:update:lock');
   _strings.delete('linbofs:update:lock');
   _strings.delete('grub:regen:lock');
+  _strings.delete('kernel:switch:lock');
   _strings.delete('imgsync:lock');
   _strings.delete('imgpush:lock');
 }
@@ -955,17 +957,21 @@ function gc() {
   const now = Date.now();
   let evicted = 0;
 
-  // Strings: check expiresAt
-  for (const [key, entry] of _strings) {
-    if (entry.expiresAt !== null && entry.expiresAt <= now) {
+  // Snapshot keys before iterating to avoid iterator invalidation on concurrent deletes
+  const stringKeys = Array.from(_strings.keys());
+  for (const key of stringKeys) {
+    const entry = _strings.get(key);
+    if (entry && entry.expiresAt !== null && entry.expiresAt <= now) {
       _strings.delete(key);
       evicted++;
     }
   }
 
   // Non-string structures: check _ttls
-  for (const [key, meta] of _ttls) {
-    if (meta.expiresAt !== null && meta.expiresAt <= now) {
+  const ttlKeys = Array.from(_ttls.keys());
+  for (const key of ttlKeys) {
+    const meta = _ttls.get(key);
+    if (meta && meta.expiresAt !== null && meta.expiresAt <= now) {
       _sets.delete(key);
       _hashes.delete(key);
       _sorted.delete(key);

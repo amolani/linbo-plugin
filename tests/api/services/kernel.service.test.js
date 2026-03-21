@@ -89,6 +89,9 @@ describe('Kernel Service', () => {
     jest.clearAllMocks();
     // Reset in-process rebuild flag
     kernelService._setRebuildActive(false);
+    // Clear kernel switch lock (in-memory store)
+    const redis = require('../../../src/lib/redis');
+    await redis.getClient().del('kernel:switch:lock');
     // Clean up state between tests
     await removeStateFile();
     await removeCustomKernel();
@@ -352,9 +355,9 @@ describe('Kernel Service', () => {
     });
 
     test('should return 409 when rebuild already running', async () => {
-      // Simulate an active rebuild in this process so readKernelState doesn't auto-correct
-      kernelService._setRebuildActive(true);
-      await kernelService.writeKernelState({ rebuildStatus: 'running' });
+      // Simulate an active rebuild by acquiring the store lock
+      const redis = require('../../../src/lib/redis');
+      await redis.getClient().set('kernel:switch:lock', '1', 'NX', 'EX', 600);
 
       try {
         await kernelService.switchKernel('stable');

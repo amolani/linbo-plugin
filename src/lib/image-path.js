@@ -7,6 +7,7 @@
  */
 
 const path = require('path');
+const fs = require('fs');
 
 const IMAGE_EXTS = ['.qcow2', '.qdiff', '.cloop'];
 const IMAGE_SIDECARS = ['.info', '.desc', '.torrent', '.macct', '.md5'];
@@ -55,6 +56,35 @@ function parseMainFilename(filename) {
 }
 
 /**
+ * Reject symlinks in the resolved path to prevent symlink-based file access attacks.
+ * Checks the image directory and the target file itself.
+ * @throws {Error} if any component is a symlink
+ */
+function rejectSymlinks(filePath) {
+  // Check the image subdirectory
+  const dir = path.dirname(filePath);
+  try {
+    const dirStat = fs.lstatSync(dir);
+    if (dirStat.isSymbolicLink()) {
+      throw new Error(`Symlink not allowed in image path: ${path.basename(dir)}`);
+    }
+  } catch (err) {
+    if (err.code !== 'ENOENT') throw err;
+    // Directory doesn't exist yet — safe (no symlink)
+  }
+  // Check the file itself
+  try {
+    const fileStat = fs.lstatSync(filePath);
+    if (fileStat.isSymbolicLink()) {
+      throw new Error(`Symlink not allowed: ${path.basename(filePath)}`);
+    }
+  } catch (err) {
+    if (err.code !== 'ENOENT') throw err;
+    // File doesn't exist yet — safe
+  }
+}
+
+/**
  * Resolve the image subdirectory: IMAGES_DIR/<base>/
  */
 function resolveImageDir(mainFilename) {
@@ -64,19 +94,25 @@ function resolveImageDir(mainFilename) {
 
 /**
  * Resolve the full image path: IMAGES_DIR/<base>/<filename>
+ * Rejects symlinks to prevent file access via symlink attacks.
  */
 function resolveImagePath(mainFilename) {
   const { base, filename } = parseMainFilename(mainFilename);
-  return path.join(IMAGES_DIR, base, filename);
+  const resolved = path.join(IMAGES_DIR, base, filename);
+  rejectSymlinks(resolved);
+  return resolved;
 }
 
 /**
  * Resolve a sidecar file path: IMAGES_DIR/<base>/<filename><suffix>
  * e.g. resolveSidecarPath("ubuntu22.qcow2", ".md5")
+ * Rejects symlinks.
  */
 function resolveSidecarPath(mainFilename, suffix) {
   const { base, filename } = parseMainFilename(mainFilename);
-  return path.join(IMAGES_DIR, base, filename + suffix);
+  const resolved = path.join(IMAGES_DIR, base, filename + suffix);
+  rejectSymlinks(resolved);
+  return resolved;
 }
 
 /**
