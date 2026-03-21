@@ -14,9 +14,51 @@
 'use strict';
 
 const { EventEmitter } = require('events');
+const crypto = require('crypto');
 const fsp = require('fs/promises');
 const path = require('path');
 const { atomicWrite } = require('./atomic-write');
+
+// ---------------------------------------------------------------------------
+// Snapshot encryption (AES-256-GCM)
+// ---------------------------------------------------------------------------
+
+const ENCRYPTION_KEY = process.env.STORE_ENCRYPTION_KEY || null;
+
+/**
+ * Encrypt plaintext with AES-256-GCM. Returns "iv:authTag:ciphertext" (hex).
+ */
+function encrypt(plaintext) {
+  if (!ENCRYPTION_KEY) return plaintext;
+  const key = crypto.createHash('sha256').update(ENCRYPTION_KEY).digest();
+  const iv = crypto.randomBytes(12);
+  const cipher = crypto.createCipheriv('aes-256-gcm', key, iv);
+  let encrypted = cipher.update(plaintext, 'utf8', 'hex');
+  encrypted += cipher.final('hex');
+  const authTag = cipher.getAuthTag().toString('hex');
+  return `ENC:${iv.toString('hex')}:${authTag}:${encrypted}`;
+}
+
+/**
+ * Decrypt ciphertext. Returns plaintext. If input is not encrypted, returns as-is.
+ */
+function decrypt(data) {
+  if (!data.startsWith('ENC:')) return data; // Unencrypted (legacy)
+  if (!ENCRYPTION_KEY) {
+    throw new Error('Store snapshot is encrypted but STORE_ENCRYPTION_KEY is not set');
+  }
+  const key = crypto.createHash('sha256').update(ENCRYPTION_KEY).digest();
+  const parts = data.split(':');
+  // ENC:iv:authTag:ciphertext
+  const iv = Buffer.from(parts[1], 'hex');
+  const authTag = Buffer.from(parts[2], 'hex');
+  const ciphertext = parts[3];
+  const decipher = crypto.createDecipheriv('aes-256-gcm', key, iv);
+  decipher.setAuthTag(authTag);
+  let decrypted = decipher.update(ciphertext, 'hex', 'utf8');
+  decrypted += decipher.final('utf8');
+  return decrypted;
+}
 
 // ---------------------------------------------------------------------------
 // Snapshot path
@@ -779,7 +821,8 @@ async function flushToDisk(snapshotPath) {
     });
   }
 
-  await atomicWrite(filePath, JSON.stringify(snap, null, 2));
+  const json = JSON.stringify(snap, null, 2);
+  await atomicWrite(filePath, encrypt(json));
 }
 
 /**
@@ -806,9 +849,10 @@ async function loadFromDisk(snapshotPath) {
 
   let snap;
   try {
-    snap = JSON.parse(raw);
+    const plaintext = decrypt(raw);
+    snap = JSON.parse(plaintext);
   } catch (err) {
-    console.warn('[Store] snapshot parse failed:', err.message);
+    console.warn('[Store] snapshot decrypt/parse failed:', err.message);
     return;
   }
 

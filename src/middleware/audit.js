@@ -6,6 +6,10 @@
 
 const { v4: uuidv4 } = require('uuid');
 
+// Audit log ring buffer (in-memory, persisted via store snapshot)
+const MAX_AUDIT_ENTRIES = 1000;
+let _auditLog = [];
+
 /**
  * Generate unique request ID
  */
@@ -23,10 +27,32 @@ function requestId(req, res, next) {
 }
 
 /**
- * Create audit log entry (no-op — DB persistence removed)
+ * Create audit log entry — stores in ring buffer (max 1000 entries).
+ * Persisted via store snapshot on disk.
  */
-async function createAuditLog() {
-  return;
+async function createAuditLog(entry) {
+  if (!entry || !entry.action) return;
+
+  const record = {
+    id: uuidv4(),
+    timestamp: new Date().toISOString(),
+    actor: entry.actor || 'anonymous',
+    action: entry.action,
+    targetType: entry.targetType || null,
+    targetId: entry.targetId || null,
+    targetName: entry.targetName || null,
+    status: entry.status || 'success',
+    errorMessage: entry.errorMessage || null,
+    ipAddress: entry.ipAddress || null,
+    requestId: entry.requestId || null,
+  };
+
+  _auditLog.push(record);
+
+  // Ring buffer: trim oldest when exceeding max
+  if (_auditLog.length > MAX_AUDIT_ENTRIES) {
+    _auditLog = _auditLog.slice(-MAX_AUDIT_ENTRIES);
+  }
 }
 
 /**
@@ -116,10 +142,36 @@ function auditWrites(req, res, next) {
 }
 
 /**
- * Query audit logs (no-op — DB persistence removed, always returns empty)
+ * Query audit logs from ring buffer (newest first, paginated).
  */
-async function queryAuditLogs({ page = 1, limit = 50 } = {}) {
-  return { data: [], pagination: { page, limit, total: 0, pages: 0 } };
+async function queryAuditLogs({ page = 1, limit = 50, action, actor } = {}) {
+  let filtered = [..._auditLog].reverse(); // newest first
+
+  if (action) filtered = filtered.filter(e => e.action.startsWith(action));
+  if (actor) filtered = filtered.filter(e => e.actor === actor);
+
+  const total = filtered.length;
+  const pages = Math.ceil(total / limit);
+  const start = (page - 1) * limit;
+  const data = filtered.slice(start, start + limit);
+
+  return { data, pagination: { page, limit, total, pages } };
+}
+
+/**
+ * Get the raw audit log array (for snapshot persistence).
+ */
+function getAuditLog() {
+  return _auditLog;
+}
+
+/**
+ * Restore audit log from snapshot.
+ */
+function restoreAuditLog(entries) {
+  if (Array.isArray(entries)) {
+    _auditLog = entries.slice(-MAX_AUDIT_ENTRIES);
+  }
 }
 
 module.exports = {
@@ -129,4 +181,6 @@ module.exports = {
   auditAction,
   auditWrites,
   queryAuditLogs,
+  getAuditLog,
+  restoreAuditLog,
 };

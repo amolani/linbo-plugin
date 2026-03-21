@@ -32,6 +32,26 @@ function getAuthToken(): string | null {
   return token;
 }
 
+/**
+ * Store a new token in both localStorage locations.
+ */
+function setAuthToken(token: string) {
+  localStorage.setItem('token', token);
+  // Also update Zustand persist storage if it exists
+  const authStorage = localStorage.getItem('auth-storage');
+  if (authStorage) {
+    try {
+      const parsed = JSON.parse(authStorage);
+      if (parsed.state) {
+        parsed.state.token = token;
+        localStorage.setItem('auth-storage', JSON.stringify(parsed));
+      }
+    } catch {
+      // Ignore parse errors
+    }
+  }
+}
+
 // Request interceptor - add auth token
 apiClient.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
@@ -46,15 +66,67 @@ apiClient.interceptors.request.use(
   }
 );
 
-// Response interceptor - handle errors (no unwrapping - let API functions handle response format)
+// Token refresh state — prevent parallel refresh attempts
+let isRefreshing = false;
+let refreshPromise: Promise<string | null> | null = null;
+
+/**
+ * Attempt to refresh the JWT token using the /auth/refresh endpoint.
+ * Returns the new token or null if refresh failed.
+ */
+async function refreshToken(): Promise<string | null> {
+  const currentToken = getAuthToken();
+  if (!currentToken) return null;
+
+  try {
+    // Use raw axios to avoid interceptor loop
+    const res = await axios.post(`${API_BASE_URL}/auth/refresh`, null, {
+      headers: { Authorization: `Bearer ${currentToken}` },
+    });
+    const newToken = res.data?.data?.token;
+    if (newToken) {
+      setAuthToken(newToken);
+      return newToken;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+// Response interceptor - attempt token refresh on 401, then retry once
 apiClient.interceptors.response.use(
   (response) => response,
-  (error: AxiosError) => {
-    if (error.response?.status === 401) {
+  async (error: AxiosError) => {
+    const originalRequest = error.config as InternalAxiosRequestConfig & { _retried?: boolean };
+
+    // Only attempt refresh for 401 responses that haven't been retried
+    if (error.response?.status === 401 && originalRequest && !originalRequest._retried) {
+      originalRequest._retried = true;
+
+      // Deduplicate concurrent refresh attempts
+      if (!isRefreshing) {
+        isRefreshing = true;
+        refreshPromise = refreshToken().finally(() => {
+          isRefreshing = false;
+          refreshPromise = null;
+        });
+      }
+
+      const newToken = await refreshPromise;
+
+      if (newToken) {
+        // Retry the original request with new token
+        originalRequest.headers.Authorization = `Bearer ${newToken}`;
+        return apiClient(originalRequest);
+      }
+
+      // Refresh failed — force logout
       localStorage.removeItem('token');
       localStorage.removeItem('auth-storage');
       window.location.href = '/login';
     }
+
     return Promise.reject(error);
   }
 );

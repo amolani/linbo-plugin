@@ -12,6 +12,9 @@ const http = require('http');
 // Load environment variables
 require('dotenv').config();
 
+// Structured logger (pino)
+const log = require('./lib/logger');
+
 // BigInt JSON serialization support
 BigInt.prototype.toJSON = function () { return Number(this); };
 
@@ -82,7 +85,10 @@ app.use(cors({
   credentials: true,
 }));
 
-app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
+// HTTP request logging via morgan → pino
+app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev', {
+  stream: { write: (msg) => log.info(msg.trimEnd()) },
+}));
 
 // Rate limiting for write operations (POST/PUT/DELETE on /api/v1/)
 const { writeLimiter } = require('./middleware/rate-limit');
@@ -261,7 +267,7 @@ const PORT = process.env.PORT || 3000;
 const HOST = process.env.HOST || '0.0.0.0';
 
 async function startServer() {
-  console.log('Starting LINBO Plugin API Server (sync-only mode)...\n');
+  log.info('Starting LINBO Plugin API Server (sync-only mode)...');
 
   // Validate secrets before proceeding
   validateSecrets();
@@ -287,7 +293,7 @@ async function startServer() {
 
   // Global Error Handler (must be after route mounting)
   app.use((err, req, res, next) => {
-    console.error('Unhandled error:', err);
+    log.error({ err, requestId: req.requestId }, 'Unhandled error');
 
     if (err.name === 'ZodError') {
       return res.status(400).json({
@@ -852,12 +858,12 @@ process.on('SIGINT', () => shutdown('SIGINT'));
 
 // Handle uncaught errors
 process.on('uncaughtException', (err) => {
-  console.error('Uncaught Exception:', err);
+  log.fatal({ err }, 'Uncaught Exception');
   shutdown('uncaughtException');
 });
 
 process.on('unhandledRejection', (reason, promise) => {
-  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+  log.fatal({ reason }, 'Unhandled Rejection');
   shutdown('unhandledRejection');
 });
 

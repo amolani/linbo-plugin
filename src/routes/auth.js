@@ -11,8 +11,11 @@ const router = express.Router();
 
 const {
   generateToken,
+  verifyToken,
   authenticateToken,
+  JWT_SECRET,
 } = require('../middleware/auth');
+const jwt = require('jsonwebtoken');
 const { validateBody, loginSchema } = require('../middleware/validate');
 const { loginLimiter } = require('../middleware/rate-limit');
 
@@ -96,6 +99,69 @@ router.post(
     }
   }
 );
+
+/**
+ * @openapi
+ * /auth/refresh:
+ *   post:
+ *     tags: [Auth]
+ *     summary: Refresh JWT token (accepts expired tokens up to 7 days old)
+ *     responses:
+ *       200: { description: New JWT token }
+ *       401: { description: Token too old or invalid }
+ */
+router.post('/refresh', async (req, res, next) => {
+  try {
+    const authHeader = req.headers.authorization;
+    const token = authHeader && authHeader.split(' ')[1];
+
+    if (!token) {
+      return res.status(401).json({
+        error: { code: 'UNAUTHORIZED', message: 'Token required for refresh' },
+      });
+    }
+
+    // Accept expired tokens (up to 7 days) for refresh
+    let decoded;
+    try {
+      decoded = jwt.verify(token, JWT_SECRET, { ignoreExpiration: true });
+    } catch {
+      return res.status(401).json({
+        error: { code: 'INVALID_TOKEN', message: 'Token is invalid' },
+      });
+    }
+
+    // Reject tokens older than 7 days (force re-login)
+    const MAX_REFRESH_AGE = 7 * 24 * 60 * 60; // 7 days in seconds
+    const tokenAge = Math.floor(Date.now() / 1000) - (decoded.iat || 0);
+    if (tokenAge > MAX_REFRESH_AGE) {
+      return res.status(401).json({
+        error: { code: 'TOKEN_TOO_OLD', message: 'Token is too old for refresh. Please login again.' },
+      });
+    }
+
+    // Issue new token with same claims
+    const newToken = generateToken({
+      id: decoded.id,
+      username: decoded.username,
+      email: decoded.email || null,
+      role: decoded.role,
+    });
+
+    return res.json({
+      data: {
+        token: newToken,
+        user: {
+          id: decoded.id,
+          username: decoded.username,
+          role: decoded.role,
+        },
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+});
 
 /**
  * @openapi
