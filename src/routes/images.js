@@ -21,14 +21,8 @@ try {
   auditAction = () => (req, res, next) => next();
 }
 
-let redis, ws;
-try {
-  redis = require('../lib/redis');
-  ws = require('../lib/websocket');
-} catch {
-  redis = { delPattern: async () => {} };
-  ws = { broadcast: () => {} };
-}
+const redis = require('../lib/redis');
+const ws = require('../lib/websocket');
 
 const fs = require('fs').promises;
 const path = require('path');

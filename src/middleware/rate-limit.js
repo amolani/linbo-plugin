@@ -37,4 +37,23 @@ function createLoginLimiter(options = {}) {
 
 const loginLimiter = createLoginLimiter();
 
-module.exports = { loginLimiter, createLoginLimiter };
+/**
+ * General write-operation rate limiter.
+ * Limits POST/PUT/DELETE requests to 30 per minute per IP.
+ * Protects against abuse of resource-intensive operations
+ * (image uploads, driver extraction, SSH commands, system updates).
+ */
+const writeLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  limit: 30,
+  standardHeaders: 'draft-7',
+  legacyHeaders: false,
+  message: {
+    error: {
+      code: 'RATE_LIMITED',
+      message: 'Too many requests. Please try again later.',
+    },
+  },
+});
+
+module.exports = { loginLimiter, createLoginLimiter, writeLimiter };

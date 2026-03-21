@@ -53,9 +53,10 @@ export const useWsStore = create<WsState>((set, get) => {
       }
 
       const token = localStorage.getItem('token');
-      const wsUrl = token ? `${WS_URL}?token=${token}` : WS_URL;
-
-      const ws = new WebSocket(wsUrl);
+      // Send token via Sec-WebSocket-Protocol header (avoids URL leakage in logs/referrer)
+      const ws = token
+        ? new WebSocket(WS_URL, ['auth', token])
+        : new WebSocket(WS_URL);
 
       ws.onopen = () => {
         const wasReconnect = get().reconnectAttempts > 0;

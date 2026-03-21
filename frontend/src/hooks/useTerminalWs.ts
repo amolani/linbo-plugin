@@ -26,7 +26,8 @@ export function useTerminalWs() {
     const token = localStorage.getItem('token');
     if (!token) return;
 
-    const ws = new WebSocket(`${WS_BASE}?token=${token}`);
+    // Send token via Sec-WebSocket-Protocol header (avoids URL leakage in logs/referrer)
+    const ws = new WebSocket(WS_BASE, ['auth', token]);
 
     ws.onopen = () => {
       setIsConnected(true);

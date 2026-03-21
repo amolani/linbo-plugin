@@ -65,7 +65,15 @@ app.set('trust proxy', 'loopback, linklocal, uniquelocal');
 // Middleware
 // =============================================================================
 app.use(helmet({
-  contentSecurityPolicy: false, // Disable for API + Swagger UI
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'"],   // Swagger UI needs inline scripts
+      styleSrc: ["'self'", "'unsafe-inline'"],     // Swagger UI needs inline styles
+      imgSrc: ["'self'", "data:"],                 // Swagger UI uses data: URIs
+      connectSrc: ["'self'", "ws:", "wss:"],       // WebSocket connections
+    },
+  },
   crossOriginEmbedderPolicy: false, // Required for Swagger UI assets
 }));
 
@@ -75,6 +83,15 @@ app.use(cors({
 }));
 
 app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
+
+// Rate limiting for write operations (POST/PUT/DELETE on /api/v1/)
+const { writeLimiter } = require('./middleware/rate-limit');
+app.use('/api/v1', (req, res, next) => {
+  if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(req.method)) {
+    return writeLimiter(req, res, next);
+  }
+  next();
+});
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
@@ -321,7 +338,14 @@ async function startServer() {
         const data = JSON.parse(message);
 
         if (data.type === 'subscribe') {
-          ws.channels = data.channels || [];
+          // Validate channels — only allow known prefixes
+          const ALLOWED_CHANNEL_RE = /^(\*|host:\S+|room:\S+|operation:\S+|sync|drivers|images|system|logs)$/;
+          const requested = data.channels || [];
+          ws.channels = requested.filter(ch => ALLOWED_CHANNEL_RE.test(ch));
+          if (ws.channels.length !== requested.length) {
+            console.warn(`[WS] Client ${ws.user?.username || 'unknown'} requested invalid channels:`,
+              requested.filter(ch => !ALLOWED_CHANNEL_RE.test(ch)));
+          }
           ws.send(JSON.stringify({
             type: 'subscribed',
             channels: ws.channels,
@@ -395,16 +419,9 @@ async function startServer() {
   const terminalWss = new WebSocket.Server({ noServer: true });
 
   terminalWss.on('connection', (ws, req) => {
-    // Authenticate via ?token= query param
-    const url = new URL(req.url, `http://${req.headers.host}`);
-    const token = url.searchParams.get('token');
-    let user;
-    try {
-      user = verifyToken(token);
-    } catch (err) {
-      ws.close(4001, 'Authentication failed');
-      return;
-    }
+    // User is pre-authenticated in the upgrade handler
+    const user = ws.user;
+    if (!user) { ws.close(4001, 'Authentication failed'); return; }
 
     console.log(`[Terminal WS] Client connected: ${user.username}`);
 
@@ -494,17 +511,47 @@ async function startServer() {
   server._terminalWss = terminalWss;
   console.log('  Terminal WebSocket initialized');
 
+  // Extract WS auth token from multiple sources (priority order):
+  // 1. Sec-WebSocket-Protocol header: "auth, <token>" (preferred, no URL leakage)
+  // 2. ?token= query parameter (legacy, kept for backwards compatibility)
+  function extractWsToken(request) {
+    // Check Sec-WebSocket-Protocol: "auth, <token>"
+    const protocols = request.headers['sec-websocket-protocol'];
+    if (protocols) {
+      const parts = protocols.split(',').map(s => s.trim());
+      if (parts[0] === 'auth' && parts[1]) {
+        return { token: parts[1], protocol: 'auth' };
+      }
+    }
+    // Fallback: query parameter
+    const url = new URL(request.url, `http://${request.headers.host}`);
+    const token = url.searchParams.get('token');
+    return { token, protocol: null };
+  }
+
   // Route HTTP upgrade requests to the correct WebSocket server
   server.on('upgrade', (request, socket, head) => {
     const { pathname } = new URL(request.url, `http://${request.headers.host}`);
 
     if (pathname === '/ws/terminal') {
+      // Authenticate terminal WS in upgrade handler (not after connection)
+      const { token, protocol } = extractWsToken(request);
+      let user;
+      try {
+        user = verifyToken(token);
+      } catch {
+        socket.write('HTTP/1.1 401 Unauthorized\r\n\r\n');
+        socket.destroy();
+        return;
+      }
+
+      const upgradeOpts = protocol ? { protocol } : undefined;
       terminalWss.handleUpgrade(request, socket, head, (ws) => {
+        ws.user = user;
         terminalWss.emit('connection', ws, request);
       });
     } else if (pathname === '/ws') {
-      const url = new URL(request.url, `http://${request.headers.host}`);
-      const token = url.searchParams.get('token');
+      const { token, protocol } = extractWsToken(request);
       const user = verifyWsToken(token);
 
       if (!user) {
@@ -668,7 +715,9 @@ async function startServer() {
               resolve(true);
               return;
             }
-          } catch {}
+          } catch (checkErr) {
+            if (waited === 0) console.debug('  Waiting for keys/secrets:', checkErr.message);
+          }
           waited++;
           if (waited >= maxWait) { console.warn(`  rsyncd.secrets not readable after ${maxWait}s — proceeding anyway`); resolve(false); return; }
           setTimeout(check, 1000);
@@ -711,6 +760,10 @@ async function startServer() {
     }
   }, STORE_SAVE_INTERVAL);
   storeAutoSave.unref(); // Don't keep process alive just for auto-save
+
+  // Active GC pass (every 15 minutes) — evicts expired keys to prevent unbounded growth
+  const storeGcTimer = setInterval(() => { store.gc(); }, 15 * 60 * 1000);
+  storeGcTimer.unref();
 
   // Start HTTP server
   server.listen(PORT, HOST, () => {

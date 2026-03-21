@@ -41,7 +41,7 @@ function broadcast(event, data) {
   });
 
   wss.clients.forEach((client) => {
-    if (client.readyState === WebSocket.OPEN) {
+    if (client.readyState === WebSocket.OPEN && client.user) {
       client.send(message);
     }
   });

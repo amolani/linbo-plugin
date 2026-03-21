@@ -18,17 +18,10 @@ const { KEY, loadAllHostsFromRedis, loadAllConfigsFromRedis } = syncService;
 
 const LINBO_DIR = process.env.LINBO_DIR || '/srv/linbo';
 
-// Auth middleware (always available since middleware/auth.js is Prisma-optional)
-let authenticate, requireAdmin;
-try {
-  const auth = require('../middleware/auth');
-  authenticate = auth.authenticateToken;
-  requireAdmin = auth.requireRole(['admin']);
-} catch {
-  // Fallback: allow all if auth middleware not available
-  authenticate = (req, res, next) => next();
-  requireAdmin = (req, res, next) => next();
-}
+// Auth middleware
+const auth = require('../middleware/auth');
+const authenticate = auth.authenticateToken;
+const requireAdmin = auth.requireRole(['admin']);
 
 // ---------------------------------------------------------------------------
 // GET /sync/mode — Public (no auth required, needed before login)

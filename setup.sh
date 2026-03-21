@@ -93,7 +93,7 @@ check_ports() {
     echo "Checking ports..."
     echo ""
 
-    for spec in "69:udp:TFTP" "873:tcp:rsync" "80:tcp:nginx" "67:udp:DHCP"; do
+    for spec in "69:udp:TFTP" "873:tcp:rsync" "80:tcp:nginx" "3000:tcp:API" "67:udp:DHCP"; do
         IFS=: read -r port proto svc <<< "$spec"
         local flag=$([[ "$proto" == "tcp" ]] && echo "-tlnp" || echo "-ulnp")
         if ss "$flag" sport = :"$port" 2>/dev/null | grep -q ":${port}"; then

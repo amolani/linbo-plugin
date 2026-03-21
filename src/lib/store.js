@@ -902,4 +902,39 @@ loadFromDisk().catch((err) => {
 // Exports
 // ---------------------------------------------------------------------------
 
-module.exports = { client, reset, flushToDisk, loadFromDisk };
+/**
+ * Active garbage collection pass — evicts expired keys from all data structures.
+ * Call periodically (e.g., every 15 minutes) to prevent unbounded memory growth.
+ * Returns the number of keys evicted.
+ */
+function gc() {
+  const now = Date.now();
+  let evicted = 0;
+
+  // Strings: check expiresAt
+  for (const [key, entry] of _strings) {
+    if (entry.expiresAt !== null && entry.expiresAt <= now) {
+      _strings.delete(key);
+      evicted++;
+    }
+  }
+
+  // Non-string structures: check _ttls
+  for (const [key, meta] of _ttls) {
+    if (meta.expiresAt !== null && meta.expiresAt <= now) {
+      _sets.delete(key);
+      _hashes.delete(key);
+      _sorted.delete(key);
+      _lists.delete(key);
+      _ttls.delete(key);
+      evicted++;
+    }
+  }
+
+  if (evicted > 0) {
+    console.debug(`[Store] GC: evicted ${evicted} expired keys`);
+  }
+  return evicted;
+}
+
+module.exports = { client, reset, flushToDisk, loadFromDisk, gc };
