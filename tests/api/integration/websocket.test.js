@@ -20,7 +20,7 @@ const TEST_INTERNAL_KEY = 'test-internal-api-key';
 process.env.JWT_SECRET = TEST_JWT_SECRET;
 process.env.INTERNAL_API_KEY = TEST_INTERNAL_KEY;
 
-const websocket = require('../../src/lib/websocket');
+const websocket = require('../../../src/lib/websocket');
 
 // ---------------------------------------------------------------------------
 // Helpers

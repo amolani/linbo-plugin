@@ -4,6 +4,17 @@
  */
 
 const fs = require('fs');
+const os = require('os');
+const path = require('path');
+
+// Provide a dummy key file via the SSH_PRIVATE_KEY fallback so that
+// getPrivateKey() succeeds in tests that do NOT mock fs.readFileSync.
+// We intentionally leave LINBO_CLIENT_SSH_KEY unset so that linboKeyPath
+// keeps its default value (/etc/linuxmuster/linbo/ssh_host_rsa_key_client),
+// which is required by the error-message tests that check for 'linbo_client_key'.
+const _tmpKeyPath = path.join(os.tmpdir(), `test-ssh-key-${process.pid}`);
+fs.writeFileSync(_tmpKeyPath, '-----BEGIN RSA PRIVATE KEY-----\ndummy\n-----END RSA PRIVATE KEY-----');
+process.env.SSH_PRIVATE_KEY = _tmpKeyPath;
 
 // Mock ssh2 Client
 jest.mock('ssh2', () => ({
@@ -54,6 +65,11 @@ jest.mock('ssh2', () => ({
 const sshService = require('../../../src/services/ssh.service');
 
 describe('SSH Service', () => {
+  afterAll(() => {
+    // Remove the temporary key file created during test setup
+    try { fs.unlinkSync(_tmpKeyPath); } catch { /* ignore */ }
+  });
+
   beforeEach(() => {
     jest.clearAllMocks();
   });

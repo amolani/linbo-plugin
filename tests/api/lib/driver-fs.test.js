@@ -11,7 +11,7 @@ const TEST_BASE = path.join(os.tmpdir(), `driver-fs-test-${Date.now()}`);
 const {
   listDirRecursive, countFiles, getDirSize, removeSymlinks,
   computeSetHash, generateManifest,
-} = require('../../src/lib/driver-fs');
+} = require('../../../src/lib/driver-fs');
 
 describe('driver-fs', () => {
   beforeEach(async () => {

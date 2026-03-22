@@ -92,6 +92,8 @@ describe('Kernel Service', () => {
     // Clear kernel switch lock (in-memory store)
     const redis = require('../../../src/lib/redis');
     await redis.getClient().del('kernel:switch:lock');
+    // Ensure directories exist (may have been cleaned by afterAll)
+    await setupDirs();
     // Clean up state between tests
     await removeStateFile();
     await removeCustomKernel();
@@ -293,12 +295,18 @@ describe('Kernel Service', () => {
   // ===========================================================================
 
   describe('writeCustomKernelConfig', () => {
-    test('should write stable variant in strict format', async () => {
+    test('should remove custom_kernel for stable variant (stable is the default)', async () => {
+      // First write a non-default file so we can confirm it gets removed
+      await kernelService.writeCustomKernelConfig('longterm');
+      const before = await fs.readFile(path.join(TEST_CONFIG_DIR, 'custom_kernel'), 'utf-8');
+      expect(before).toContain('KERNELPATH="longterm"');
+
+      // Switching to stable removes the file — update-linbofs treats absent file as stable
       await kernelService.writeCustomKernelConfig('stable');
 
-      const content = await fs.readFile(path.join(TEST_CONFIG_DIR, 'custom_kernel'), 'utf-8');
-      expect(content).toContain('KERNELPATH="stable"');
-      expect(content).toContain('managed by linbo-docker');
+      await expect(
+        fs.readFile(path.join(TEST_CONFIG_DIR, 'custom_kernel'), 'utf-8')
+      ).rejects.toMatchObject({ code: 'ENOENT' });
     });
 
     test('should write longterm variant', async () => {

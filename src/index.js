@@ -181,15 +181,50 @@ app.get('/health', async (req, res) => {
     health.services.websocket = 'down';
   }
 
-  // Check LINBO filesystem (API-07)
+  // Check LINBO filesystem
   const fs = require('fs');
+  const LINBO_DIR = process.env.LINBO_DIR || '/srv/linbo';
   try {
-    fs.accessSync('/srv/linbo', fs.constants.R_OK);
+    fs.accessSync(LINBO_DIR, fs.constants.R_OK);
     health.services.linbo = 'up';
   } catch {
     health.services.linbo = 'down';
     health.status = 'degraded';
   }
+
+  // Disk space on LINBO directory
+  try {
+    const { statfsSync } = fs;
+    if (statfsSync) {
+      const diskStats = statfsSync(LINBO_DIR);
+      const freeGB = (diskStats.bfree * diskStats.bsize) / (1024 * 1024 * 1024);
+      health.disk = { freeGB: Math.round(freeGB * 10) / 10, path: LINBO_DIR };
+      if (freeGB < 1) { health.status = 'degraded'; health.disk.warning = 'low disk space'; }
+    }
+  } catch { /* statfsSync not available */ }
+
+  // Store snapshot age
+  try {
+    const storePath = process.env.STORE_SNAPSHOT || '/var/lib/linbo-native/store.json';
+    const stat = fs.statSync(storePath);
+    const ageSec = Math.round((Date.now() - stat.mtimeMs) / 1000);
+    health.store = { snapshotAgeSec: ageSec, path: storePath };
+  } catch { health.store = { snapshotAgeSec: null, path: null }; }
+
+  // Sync status
+  try {
+    const storeClient = redis.getClient();
+    const lastSync = storeClient.getSync ? null : null; // sync API not available
+    health.sync = {
+      enabled: process.env.SYNC_ENABLED === 'true',
+    };
+  } catch { /* ignore */ }
+
+  // Active terminal sessions
+  try {
+    const termService = require('./services/terminal.service');
+    health.terminalSessions = termService.listSessions().length;
+  } catch { health.terminalSessions = 0; }
 
   const statusCode = health.status === 'healthy' ? 200 : 503;
   res.status(statusCode).json(health);
@@ -774,7 +809,7 @@ async function startServer() {
   }
 
   // Periodic store snapshot (every 5 minutes) — protects against data loss on crash
-  const STORE_SAVE_INTERVAL = parseInt(process.env.STORE_SAVE_INTERVAL, 10) || 5 * 60 * 1000;
+  const STORE_SAVE_INTERVAL = parseInt(process.env.STORE_SAVE_INTERVAL, 10) || 60 * 1000; // 1 min default
   const store = require('./lib/store');
   server._storeAutoSave = setInterval(async () => {
     try {

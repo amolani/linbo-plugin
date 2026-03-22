@@ -2,7 +2,7 @@
  * LINBO Docker - Driver Shell Escaping Tests
  */
 
-const { shellEscapeExact, shellEscapeContains } = require('../../src/lib/driver-shell');
+const { shellEscapeExact, shellEscapeContains } = require('../../../src/lib/driver-shell');
 
 describe('driver-shell', () => {
   describe('shellEscapeExact()', () => {

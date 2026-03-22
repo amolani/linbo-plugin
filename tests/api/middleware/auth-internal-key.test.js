@@ -13,7 +13,7 @@ process.env.INTERNAL_API_KEY = TEST_INTERNAL_KEY;
 process.env.JWT_SECRET = TEST_JWT_SECRET;
 
 const jwt = require('jsonwebtoken');
-const { authenticateToken } = require('../../src/middleware/auth');
+const { authenticateToken } = require('../../../src/middleware/auth');
 
 /**
  * Helper: create mock Express req/res/next

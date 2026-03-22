@@ -6,7 +6,7 @@
  */
 
 // Mock settings service before requiring the module
-jest.mock('../../src/services/settings.service', () => ({
+jest.mock('../../../src/services/settings.service', () => ({
   get: jest.fn(async (key) => {
     if (key === 'lmn_api_url') return 'http://localhost:8001';
     if (key === 'lmn_api_user') return 'testuser';
@@ -64,7 +64,7 @@ global.fetch = jest.fn(async (url, options) => {
 });
 
 // Clear module cache to ensure fresh import with mocks
-const { batchGetHosts } = require('../../src/lib/lmn-api-client');
+const { batchGetHosts } = require('../../../src/lib/lmn-api-client');
 
 beforeEach(() => {
   fetchCalls = [];

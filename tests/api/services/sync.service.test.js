@@ -8,6 +8,7 @@ const os = require('os');
 // Setup temp dir and env before module load
 const tmpDir = `${os.tmpdir()}/linbo-sync-test-${process.pid}`;
 process.env.LINBO_DIR = tmpDir;
+process.env.DHCP_CONFIG_DIR = `${tmpDir}/dhcp`;
 process.env.LINBO_SERVER_IP = '10.0.0.13';
 
 // Mock dependencies

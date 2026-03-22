@@ -28,7 +28,7 @@ const {
   resolveSupplementPath,
   toRelativePath,
   resolveFromDbPath,
-} = require('../../src/lib/image-path');
+} = require('../../../src/lib/image-path');
 
 describe('Image Path Module', () => {
 

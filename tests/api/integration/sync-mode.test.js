@@ -57,33 +57,33 @@ const mockClient = {
   once: jest.fn((event, cb) => { if (event === 'ready') cb(); }),
 };
 
-jest.mock('../../src/lib/redis', () => ({
+jest.mock('../../../src/lib/redis', () => ({
   getClient: () => mockClient,
   disconnect: jest.fn(),
   delPattern: jest.fn(),
 }));
 
 // WebSocket mock
-jest.mock('../../src/lib/websocket', () => ({
+jest.mock('../../../src/lib/websocket', () => ({
   broadcast: jest.fn(),
   getServer: jest.fn(() => ({ clients: new Set() })),
   init: jest.fn(),
 }));
 
 // LMN API client mock
-jest.mock('../../src/lib/lmn-api-client', () => ({
+jest.mock('../../../src/lib/lmn-api-client', () => ({
   checkHealth: jest.fn(async () => ({ healthy: false })),
   getChanges: jest.fn(),
   batchGetHosts: jest.fn(),
 }));
 
 // Grub generator mock
-jest.mock('../../src/services/grub-generator', () => ({
+jest.mock('../../../src/services/grub-generator', () => ({
   regenerateAll: jest.fn(async () => ({})),
 }));
 
 // Settings service mock
-jest.mock('../../src/services/settings.service', () => ({
+jest.mock('../../../src/services/settings.service', () => ({
   get: jest.fn(async (key) => {
     if (key === 'sync_enabled') return 'true';
     return null;
@@ -92,17 +92,17 @@ jest.mock('../../src/services/settings.service', () => ({
 }));
 
 // Image sync service mock
-jest.mock('../../src/services/image-sync.service', () => ({
+jest.mock('../../../src/services/image-sync.service', () => ({
   recoverOnStartup: jest.fn(async () => {}),
 }));
 
 // Image push service mock
-jest.mock('../../src/services/image-push.service', () => ({
+jest.mock('../../../src/services/image-push.service', () => ({
   recoverOnStartup: jest.fn(async () => {}),
 }));
 
 // Terminal service mock
-jest.mock('../../src/services/terminal.service', () => ({
+jest.mock('../../../src/services/terminal.service', () => ({
   createSession: jest.fn(),
   writeToSession: jest.fn(),
   resizeSession: jest.fn(),
@@ -113,7 +113,7 @@ jest.mock('../../src/services/terminal.service', () => ({
 }));
 
 // Linbofs service mock (auto-rebuild check)
-jest.mock('../../src/services/linbofs.service', () => ({
+jest.mock('../../../src/services/linbofs.service', () => ({
   updateLinbofs: jest.fn(async () => ({ success: true })),
 }));
 
@@ -173,7 +173,7 @@ beforeAll(async () => {
   await fs.mkdir(path.join(tmpDir, 'gui'), { recursive: true });
 
   // Require the app (triggers startServer)
-  const appModule = require('../../src/index');
+  const appModule = require('../../../src/index');
   app = appModule.app;
 
   // The server is created in index.js but listen() is async.

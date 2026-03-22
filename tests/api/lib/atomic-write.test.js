@@ -4,7 +4,7 @@
 const fsp = require('fs/promises');
 const path = require('path');
 const os = require('os');
-const { atomicWrite, atomicWriteWithMd5, safeUnlink, forceSymlink } = require('../../src/lib/atomic-write');
+const { atomicWrite, atomicWriteWithMd5, safeUnlink, forceSymlink } = require('../../../src/lib/atomic-write');
 
 describe('atomic-write', () => {
   let tmpDir;

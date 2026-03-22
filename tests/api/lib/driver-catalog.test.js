@@ -11,7 +11,7 @@ const {
   getCatalog, getCategories, getCatalogByCategory,
   findByVendorDevice, resolveCategory, searchCatalog,
   mergeCatalogs, invalidateCache,
-} = require('../../src/lib/driver-catalog');
+} = require('../../../src/lib/driver-catalog');
 
 describe('driver-catalog', () => {
   beforeEach(() => {

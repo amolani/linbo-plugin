@@ -1,7 +1,7 @@
 /**
  * Tests for start.conf server= rewrite — scoped to [LINBO] section
  */
-const { rewriteServerField } = require('../../src/lib/startconf-rewrite');
+const { rewriteServerField } = require('../../../src/lib/startconf-rewrite');
 
 describe('rewriteServerField', () => {
   const REAL_START_CONF = `[LINBO]

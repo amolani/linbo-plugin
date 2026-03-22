@@ -19,7 +19,7 @@ process.env.SRV_LINBO_DIR = TEST_BASE;
 const {
   DRIVERS_BASE, IMAGE_DIR, MAX_ZIP_ENTRIES, MAX_ZIP_SIZE,
   sanitizeName, sanitizeRelativePath, resolveAndValidate, resolveDriverPath,
-} = require('../../src/lib/driver-path');
+} = require('../../../src/lib/driver-path');
 
 describe('driver-path', () => {
   beforeEach(async () => {

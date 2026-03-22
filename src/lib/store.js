@@ -753,9 +753,17 @@ async function flushToDisk(snapshotPath) {
   const filePath = snapshotPath || SNAPSHOT_PATH;
   const now = Date.now();
 
+  // Include audit log in snapshot
+  let auditLog = [];
+  try {
+    const { getAuditLog } = require('../middleware/audit');
+    auditLog = getAuditLog();
+  } catch { /* audit module not loaded yet */ }
+
   const snap = {
-    version: 1,
+    version: 2,
     timestamp: now,
+    auditLog,
     strings: [],
     sets: [],
     hashes: [],
@@ -936,6 +944,14 @@ async function loadFromDisk(snapshotPath) {
   _strings.delete('kernel:switch:lock');
   _strings.delete('imgsync:lock');
   _strings.delete('imgpush:lock');
+
+  // Restore audit log from snapshot
+  if (snap.auditLog) {
+    try {
+      const { restoreAuditLog } = require('../middleware/audit');
+      restoreAuditLog(snap.auditLog);
+    } catch { /* audit module not loaded yet */ }
+  }
 }
 
 // ---------------------------------------------------------------------------

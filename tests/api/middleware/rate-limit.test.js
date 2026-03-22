@@ -13,7 +13,7 @@ describe('loginLimiter', () => {
 
   beforeEach(() => {
     // Create a fresh limiter instance for each test (in-memory store)
-    const rateLimitModule = require('../../src/middleware/rate-limit');
+    const rateLimitModule = require('../../../src/middleware/rate-limit');
     createLoginLimiter = rateLimitModule.createLoginLimiter;
 
     // Create a minimal Express app with the rate limiter mounted
@@ -31,7 +31,7 @@ describe('loginLimiter', () => {
 
   // Test 1: loginLimiter is an express middleware function
   test('loginLimiter is an express middleware function', () => {
-    const { loginLimiter } = require('../../src/middleware/rate-limit');
+    const { loginLimiter } = require('../../../src/middleware/rate-limit');
     expect(typeof loginLimiter).toBe('function');
     // Express middleware takes (req, res, next)
     expect(loginLimiter.length).toBeGreaterThanOrEqual(0);
