@@ -71,7 +71,7 @@ describe('SSH Service', () => {
   });
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    // Only clear spies, NOT module mocks (ssh2 mock must persist)
   });
 
   describe('getPrivateKey', () => {
@@ -196,11 +196,7 @@ describe('SSH Service', () => {
   });
 
   describe('getConfig', () => {
-    const { getConfig, _resetCache } = sshService._testing;
-
-    beforeEach(() => {
-      _resetCache();
-    });
+    const { getConfig } = sshService._testing;
 
     test('returns config object with privateKey from getPrivateKey()', () => {
       const fakeKey = Buffer.from('-----BEGIN RSA PRIVATE KEY-----\nfake\n-----END RSA PRIVATE KEY-----');
