@@ -14,6 +14,9 @@ router.use('/', require('./grub-theme'));
 router.use('/', require('./grub-config'));
 router.use('/', require('./linbo-update'));
 router.use('/', require('./hooks'));
+router.use('/', require('./torrent'));
+router.use('/', require('./multicast'));
+router.use('/', require('./boot-logs'));
 
 // --- API Log Catchup Endpoint ---
 /**
