@@ -715,6 +715,18 @@ deploy_api() {
     systemctl daemon-reload
     systemctl enable linbo-api linbo-setup 2>/dev/null
     log_ok "systemd units installed and enabled"
+
+    # sudoers: allow linbo user to run LINBO management commands without password
+    cat > /etc/sudoers.d/linbo-services << 'SUDOEOF'
+# Allow linbo API service to manage LINBO services
+linbo ALL=(root) NOPASSWD: /usr/sbin/linbo-torrent
+linbo ALL=(root) NOPASSWD: /usr/sbin/linbo-multicast
+linbo ALL=(root) NOPASSWD: /usr/sbin/update-linbofs
+linbo ALL=(root) NOPASSWD: /bin/systemctl restart isc-dhcp-server
+linbo ALL=(root) NOPASSWD: /usr/sbin/dhcpd -t -cf *
+SUDOEOF
+    chmod 440 /etc/sudoers.d/linbo-services
+    log_ok "sudoers configured for linbo service management"
 }
 
 # =============================================================================
