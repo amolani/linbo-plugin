@@ -118,7 +118,7 @@ describe('SSH Service', () => {
       expect(() => {
         _resetCache();
         getPrivateKey();
-      }).toThrow(/linbo_client_key/);
+      }).toThrow(/ssh_host_rsa_key_client/);
 
       process.env.SSH_PRIVATE_KEY = origFallback;
       spy.mockRestore();
@@ -188,7 +188,7 @@ describe('SSH Service', () => {
       }
 
       expect(thrownMessage).not.toContain('SSH container');
-      expect(thrownMessage).toContain('linbo_client_key');
+      expect(thrownMessage).toContain('ssh_host_rsa_key_client');
 
       process.env.SSH_PRIVATE_KEY = origFallback;
       spy.mockRestore();
