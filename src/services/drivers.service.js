@@ -417,7 +417,7 @@ async function regeneratePostsync(imageName) {
     }
   }
 
-  const postsyncPath = path.join(IMAGES_DIR, imageName, imageName + '.postsync');
+  const postsyncPath = path.join(IMAGES_DIR, imageName, imageName + '.treiberpostsync');
 
   if (referencingProfiles.length === 0) {
     // No profiles reference this image — delete postsync if it exists
@@ -426,7 +426,7 @@ async function regeneratePostsync(imageName) {
     } catch {
       // File does not exist — nothing to do
     }
-    ws.broadcast('drivers.postsync_updated', { image: imageName, profiles: 0 });
+    ws.broadcast('drivers.treiberpostsync_updated', { image: imageName, profiles: 0 });
     return;
   }
 
@@ -563,7 +563,7 @@ cp "$LOG" "/cache/linbo-drivers-postsync.log" 2>/dev/null
 
   await fs.writeFile(postsyncPath, script, { mode: 0o755 });
 
-  ws.broadcast('drivers.postsync_updated', { image: imageName, profiles: referencingProfiles.length });
+  ws.broadcast('drivers.treiberpostsync_updated', { image: imageName, profiles: referencingProfiles.length });
 }
 
 // =============================================================================
@@ -690,14 +690,37 @@ async function updateMatchConf(folderName, content) {
     throw err;
   }
 
+  // Validate match values before writing (prevents shell injection in postsync scripts)
+  const { validateMatchValue } = require('../lib/driver-shell');
+  const parsed = parseMatchConf(content);
+
+  const vendorErr = validateMatchValue(parsed.vendor);
+  if (vendorErr) {
+    const err = new Error(`Invalid vendor in match.conf: ${vendorErr}`);
+    err.statusCode = 400;
+    throw err;
+  }
+  for (const product of parsed.products) {
+    const productErr = validateMatchValue(product);
+    if (productErr) {
+      const err = new Error(`Invalid product in match.conf: ${productErr}`);
+      err.statusCode = 400;
+      throw err;
+    }
+  }
+
   const matchConfPath = await resolveAndValidate(safeName, 'match.conf');
 
-  // Atomic write (tmp + rename)
-  const tmp = matchConfPath + '.tmp.' + process.pid;
-  await fs.writeFile(tmp, content, { mode: 0o644 });
-  await fs.rename(tmp, matchConfPath);
-
-  const parsed = parseMatchConf(content);
+  // Atomic write with random suffix (PID-reuse safe) + cleanup on failure
+  const suffix = Date.now() + '-' + Math.random().toString(36).slice(2);
+  const tmp = matchConfPath + '.tmp.' + suffix;
+  try {
+    await fs.writeFile(tmp, content, { mode: 0o644 });
+    await fs.rename(tmp, matchConfPath);
+  } catch (writeErr) {
+    await fs.unlink(tmp).catch(() => {});
+    throw writeErr;
+  }
 
   ws.broadcast('drivers.match_conf_updated', { folder: safeName, vendor: parsed.vendor, products: parsed.products });
 
@@ -723,6 +746,28 @@ async function extractArchive(folderName, archivePath, originalName) {
     err.statusCode = 404;
     throw err;
   }
+
+  // Concurrency lock — prevent parallel extractions to same profile
+  const lockFile = path.join(profileDir, '.extracting');
+  try {
+    await fs.writeFile(lockFile, `${process.pid}\n${new Date().toISOString()}`, { flag: 'wx' });
+  } catch (lockErr) {
+    if (lockErr.code === 'EEXIST') {
+      const err = new Error(`Extraction already in progress for profile: ${safeName}`);
+      err.statusCode = 409;
+      throw err;
+    }
+    throw lockErr;
+  }
+
+  try {
+    return await _doExtract(safeName, profileDir, archivePath, originalName);
+  } finally {
+    await fs.unlink(lockFile).catch(() => {});
+  }
+}
+
+async function _doExtract(safeName, profileDir, archivePath, originalName) {
 
   const { execFile } = require('child_process');
 

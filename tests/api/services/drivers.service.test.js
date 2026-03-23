@@ -405,7 +405,7 @@ describe('regeneratePostsync', () => {
     await driversService.regeneratePostsync('win11_pro');
 
     // Verify postsync script was created
-    const postsyncPath = path.join(imageDir, 'win11_pro.postsync');
+    const postsyncPath = path.join(imageDir, 'win11_pro.treiberpostsync');
     const content = await fs.readFile(postsyncPath, 'utf-8');
     expect(content).toContain('#!/bin/sh');
     expect(content).toContain('win11_pro');
@@ -418,12 +418,12 @@ describe('regeneratePostsync', () => {
     // Create a postsync that should be deleted
     const imageDir = path.join(IMAGES_DIR, 'win11_pro');
     await fs.mkdir(imageDir, { recursive: true });
-    await fs.writeFile(path.join(imageDir, 'win11_pro.postsync'), '#!/bin/sh\nold script\n');
+    await fs.writeFile(path.join(imageDir, 'win11_pro.treiberpostsync'), '#!/bin/sh\nold script\n');
 
     await driversService.regeneratePostsync('win11_pro');
 
     // Verify postsync was deleted
-    await expect(fs.access(path.join(imageDir, 'win11_pro.postsync')))
+    await expect(fs.access(path.join(imageDir, 'win11_pro.treiberpostsync')))
       .rejects.toThrow();
   });
 
@@ -441,7 +441,7 @@ describe('regeneratePostsync', () => {
 
     await driversService.regeneratePostsync('win11_pro');
 
-    const content = await fs.readFile(path.join(imageDir, 'win11_pro.postsync'), 'utf-8');
+    const content = await fs.readFile(path.join(imageDir, 'win11_pro.treiberpostsync'), 'utf-8');
     expect(content).toContain('Dell_OptiPlex');
     expect(content).toContain('HP_EliteDesk');
   });
@@ -449,7 +449,7 @@ describe('regeneratePostsync', () => {
   test('broadcasts postsync_updated event', async () => {
     await driversService.regeneratePostsync('win11_pro');
 
-    expect(ws.broadcast).toHaveBeenCalledWith('drivers.postsync_updated',
+    expect(ws.broadcast).toHaveBeenCalledWith('drivers.treiberpostsync_updated',
       expect.objectContaining({ image: 'win11_pro' })
     );
   });
