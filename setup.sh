@@ -789,7 +789,12 @@ NGINXEOF
     rm -f /etc/nginx/sites-enabled/default
 
     if nginx -t 2>/dev/null; then
-        systemctl reload nginx
+        # Start if not running, reload if already running
+        if systemctl is-active nginx >/dev/null 2>&1; then
+            systemctl reload nginx
+        else
+            systemctl start nginx
+        fi
         log_ok "nginx configured and reloaded"
     else
         log_warn "nginx config test failed — check /etc/nginx/sites-available/linbo"
