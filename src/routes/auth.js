@@ -11,7 +11,6 @@ const router = express.Router();
 
 const {
   generateToken,
-  verifyToken,
   authenticateToken,
   JWT_SECRET,
 } = require('../middleware/auth');

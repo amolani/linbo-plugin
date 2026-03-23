@@ -1,11 +1,7 @@
 /**
  * LINBO Plugin - LMN API Client
  * HTTP client for fetching LINBO data from linuxmuster-api (port 8001)
- * or the legacy Authority API (port 8400).
- *
- * Auth mode is auto-detected from the configured URL:
- *   - Port 8001 (linuxmuster-api): JWT auth via /v1/auth, paths under /v1/linbo/
- *   - Port 8400 (Authority API):   Static Bearer token, paths under /api/v1/linbo/
+ * with JWT auth via /v1/auth, paths under /v1/linbo/.
  */
 
 const REQUEST_TIMEOUT = 10_000;
@@ -152,7 +148,7 @@ async function getChanges(cursor = '', school = '') {
 }
 
 /**
- * Maximum MACs per batch call — Authority API enforces a hard 500-MAC limit.
+ * Maximum MACs per batch call — LMN API enforces a hard 500-MAC limit.
  */
 const BATCH_SIZE = 500;
 
@@ -256,7 +252,7 @@ async function getDhcpExport(etag = null) {
 }
 
 /**
- * Get ISC DHCP config for a school from the Authority API.
+ * Get ISC DHCP config for a school from the LMN API.
  * @param {string} school - School name (default: 'default-school')
  * @returns {Promise<{school: string, subnets: string, devices: string, subnetsUpdatedAt: string, devicesUpdatedAt: string}>}
  */
@@ -271,7 +267,7 @@ async function getIscDhcpConfig(school = 'default-school') {
 }
 
 /**
- * Fetch all GRUB configs for a school from the Authority API.
+ * Fetch all GRUB configs for a school from the LMN API.
  * @param {string} school - School name (default: 'default-school')
  * @returns {Promise<{configs: Array<{id, filename, content, updatedAt}>, school: string, total: number}>}
  */

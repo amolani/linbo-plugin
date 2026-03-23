@@ -1,12 +1,11 @@
 /**
  * LINBO Plugin - Image Push Service
  *
- * Uploads QCOW2 images to the LMN Authority API via HTTP chunked uploads
+ * Uploads QCOW2 images to the LMN API via HTTP chunked uploads
  * with Content-Range resume support. Mirrors the pull pattern from
  * image-sync.service.js (Redis-backed job queue, WebSocket progress).
  */
 
-const fs = require('fs');
 const fsp = require('fs/promises');
 const path = require('path');
 const redis = require('../lib/redis');
@@ -29,9 +28,9 @@ const KEY = {
 let activeAbort = null; // AbortController
 
 /**
- * Make an authenticated request to the LMN Authority API.
+ * Make an authenticated request to the LMN API.
  */
-async function lmnFetch(urlPath, options = {}, config = {}) {
+async function lmnFetch(urlPath, options = {}, _config = {}) {
   const lmnApiClient = require('../lib/lmn-api-client');
   return lmnApiClient.request(urlPath, options);
 }

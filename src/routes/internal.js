@@ -151,9 +151,8 @@ async function handleImageUpload(filename, clientIp, host, relativePath) {
   const fs = require('fs').promises;
 
   // Validate filename
-  let parsed;
   try {
-    parsed = parseMainFilename(filename);
+    parseMainFilename(filename);
   } catch (err) {
     console.error(`[Internal] Invalid image filename "${filename}": ${err.message}`);
     return;
@@ -357,7 +356,7 @@ function handleSidecarUpload(imageFilename, sidecarExt, _clientIp) {
  */
 router.post('/client-status', authenticateInternal, async (req, res, next) => {
   try {
-    const { clientIp, status, cacheInfo, hardware, osRunning } = req.body;
+    const { clientIp, status, _cacheInfo, _hardware, _osRunning } = req.body;
 
     if (!clientIp) {
       return res.status(400).json({

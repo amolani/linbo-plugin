@@ -12,7 +12,6 @@ const fs = require('fs').promises;
 const execFileAsync = promisify(execFile);
 const TORRENT_BIN = '/usr/sbin/linbo-torrent';
 const CONFIG_FILE = '/etc/default/linbo-torrent';
-const IMAGES_DIR = process.env.IMAGES_DIR || '/srv/linbo/images';
 
 // Image name validation (same pattern as image-path.js)
 const SAFE_IMAGE_RE = /^[a-zA-Z0-9._-]+$/;

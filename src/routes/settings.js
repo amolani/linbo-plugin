@@ -4,7 +4,7 @@
  * GET    /settings              — All settings (secrets masked)
  * PUT    /settings/:key         — Update setting (admin)
  * DELETE /settings/:key         — Reset setting to default (admin)
- * POST   /settings/test-connection — Test authority API connection (admin)
+ * POST   /settings/test-connection — Test LMN API connection (admin)
  */
 
 const express = require('express');
@@ -43,7 +43,7 @@ router.get('/', async (req, res, next) => {
  * /settings/test-connection:
  *   post:
  *     tags: [Settings]
- *     summary: Test LMN Authority API connectivity
+ *     summary: Test LMN API connectivity
  *     description: Tests connection to linuxmuster-api via JWT auth (HTTP Basic). Optionally pass url, user, and password to test before saving.
  *     security:
  *       - bearerAuth: []

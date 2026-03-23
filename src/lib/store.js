@@ -16,7 +16,6 @@
 const { EventEmitter } = require('events');
 const crypto = require('crypto');
 const fsp = require('fs/promises');
-const path = require('path');
 const { atomicWrite } = require('./atomic-write');
 
 // ---------------------------------------------------------------------------
@@ -698,7 +697,7 @@ const client = {
    * Supports: { match: 'pattern:*', count: 100 }
    * Has .pause(), .resume(), .destroy() methods (required by redis.js delPattern).
    */
-  scanStream({ match = '*', count = 100 } = {}) {
+  scanStream({ match = '*', _count = 100 } = {}) {
     const emitter = new EventEmitter();
 
     // Readable-stream-like methods (required by delPattern in redis.js)
@@ -735,7 +734,7 @@ const client = {
   // Raw command — throws to trigger rate-limit fallback
   // -------------------------------------------------------------------------
 
-  async call(command, ...args) {
+  async call(_command, ..._args) {
     throw new Error('store.js: call() not implemented — use in-memory rate limiting');
   },
 };
@@ -751,6 +750,11 @@ const client = {
  */
 async function flushToDisk(snapshotPath) {
   const filePath = snapshotPath || SNAPSHOT_PATH;
+
+  // Ensure snapshot directory exists (fixes EACCES on fresh installs)
+  const snapshotDir = require('path').dirname(filePath);
+  await fsp.mkdir(snapshotDir, { recursive: true }).catch(() => {});
+
   const now = Date.now();
 
   // Include audit log in snapshot

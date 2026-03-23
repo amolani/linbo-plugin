@@ -1,6 +1,6 @@
 /**
  * LINBO Plugin - GRUB Config Sync
- * Writes raw GRUB configs from LMN Authority API to the TFTP volume.
+ * Writes raw GRUB configs from LMN API to the TFTP volume.
  * Rewrites server= in kernel cmdlines to the server IP.
  * Creates hostcfg/ symlinks for GRUB hostname and MAC fallback.
  */
@@ -28,7 +28,7 @@ function rewriteGrubServerIp(content, newServerIp) {
 }
 
 /**
- * Write GRUB configs from Authority API response to the TFTP volume.
+ * Write GRUB configs from LMN API response to the TFTP volume.
  * Rewrites server= in all files. Removes stale group .cfg files not in API response.
  * Does NOT touch subdirectories (e.g. hostcfg/).
  *

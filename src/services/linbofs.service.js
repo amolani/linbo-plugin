@@ -149,7 +149,7 @@ async function updateLinbofs(options = {}) {
  * @returns {Promise<{success: boolean, exitCode: number, duration: number}>}
  */
 async function updateLinbofsStream(onData, onError, options = {}) {
-  const useFakeroot = await isFakerootAvailable();
+  await isFakerootAvailable();
   return new Promise((resolve, reject) => {
     const startTime = Date.now();
 

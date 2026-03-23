@@ -17,7 +17,6 @@
 const express = require('express');
 const router = express.Router();
 const syncOps = require('../services/sync-operations.service');
-const ws = require('../lib/websocket');
 
 const {
   validateCommandString,

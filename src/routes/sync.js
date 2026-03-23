@@ -708,7 +708,7 @@ router.post('/services/reload', authenticate, requireAdmin, async (req, res, nex
  *     summary: Trigger a sync cycle manually
  *     description: >
  *       Initiates a sync cycle that fetches hosts and configs from the
- *       LMN Authority API. Requires admin role. Returns 409 if a sync
+ *       LMN API. Requires admin role. Returns 409 if a sync
  *       is already in progress.
  *     security:
  *       - bearerAuth: []
@@ -1312,7 +1312,7 @@ router.delete('/images/push/queue/:jobId', authenticate, requireAdmin, async (re
  *       403:
  *         description: Forbidden (admin role required)
  */
-router.post('/images/push/test', authenticate, requireAdmin, async (req, res, next) => {
+router.post('/images/push/test', authenticate, requireAdmin, async (req, res, _next) => {
   try {
     const lmnApiClient = require('../lib/lmn-api-client');
     const settings = require('../services/settings.service');

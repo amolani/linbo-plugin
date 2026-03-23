@@ -1,14 +1,14 @@
 /**
  * LINBO Plugin - Sync Service (DB-free)
  *
- * Syncs data from the LMN Authority API to local files + Redis cache.
+ * Syncs data from the LMN API to local files + Redis cache.
  * Triggered manually via POST /api/v1/sync/trigger.
  *
  * Data flow:
- *   1. Fetch delta changes from LMN Authority API
+ *   1. Fetch delta changes from LMN API
  *   2. Write start.conf files (with server= rewrite) + MD5 + symlinks
  *   3. Cache configs/hosts in Redis
- *   4. Write GRUB configs from Authority API
+ *   4. Write GRUB configs from LMN API
  *   5. Write ISC DHCP config files to /etc/dhcp/ and restart isc-dhcp-server
  */
 
@@ -18,7 +18,6 @@ const redis = require('../lib/redis');
 const lmnClient = require('../lib/lmn-api-client');
 const { atomicWrite, atomicWriteWithMd5, safeUnlink, forceSymlink } = require('../lib/atomic-write');
 const { rewriteServerField } = require('../lib/startconf-rewrite');
-const grubGenerator = require('./grub-generator');
 const grubSync = require('./grub-sync');
 const ws = require('../lib/websocket');
 const { execFile } = require('child_process');
@@ -31,7 +30,7 @@ const DHCP_CONFIG_DIR = process.env.DHCP_CONFIG_DIR || '/etc/dhcp';
 /**
  * Fix double school-prefix in DHCP device configs.
  *
- * The Authority API prepends the school name to hostnames that already
+ * The LMN API prepends the school name to hostnames that already
  * include it, producing e.g. "schule-d-schule-d-pc01" instead of
  * "schule-d-pc01". This affects `host <name>` identifiers and
  * `option host-name "<name>"` values in the ISC DHCP config.
@@ -222,7 +221,7 @@ async function syncOnce() {
     }
 
     // 5. Sync hosts (cached in Redis, create start.conf symlinks)
-    // The authority API may return ["all"] instead of individual MACs when too many
+    // The LMN API may return ["all"] instead of individual MACs when too many
     // hosts changed — in that case, re-fetch ALL hosts via a full-snapshot request.
     let hostsToSync = delta.hostsChanged;
     if (Array.isArray(hostsToSync) && hostsToSync.includes('all')) {
@@ -372,7 +371,7 @@ async function syncOnce() {
       }
     }
 
-    // 11. Sync GRUB configs from Authority API (replaces template generation)
+    // 11. Sync GRUB configs from LMN API (replaces template generation)
     const hasChanges = stats.startConfs > 0 || stats.configs > 0 || stats.hosts > 0
       || stats.deletedStartConfs > 0 || stats.deletedHosts > 0;
 
@@ -380,7 +379,7 @@ async function syncOnce() {
       try {
         const grubResult = await lmnClient.getGrubConfigs(school);
         await grubSync.writeGrubConfigs(grubResult.configs, serverIp);
-        console.log(`[Sync] Wrote ${grubResult.total} GRUB config files from Authority API`);
+        console.log(`[Sync] Wrote ${grubResult.total} GRUB config files from LMN API`);
       } catch (err) {
         // Log but don't fail the sync — GRUB configs may not exist yet for new schools
         console.error('[Sync] GRUB config sync failed:', err.message);
@@ -500,7 +499,7 @@ async function reconcileUniverseLists(client, delta, stats) {
 /**
  * Full snapshot reconciliation: delete local items NOT in the response.
  */
-async function reconcileFullSnapshot(client, delta, stats) {
+async function reconcileFullSnapshot(client, delta, _stats) {
   console.log('[Sync] Running full snapshot reconciliation...');
 
   // Reconcile start.conf files on disk

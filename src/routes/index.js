@@ -51,7 +51,7 @@ async function createRouter() {
           'GET /sync/configs/:id': 'Get single config from sync cache',
           'GET /sync/configs/:id/preview': 'Preview start.conf file content',
           'GET /sync/stats': 'Aggregated sync statistics',
-          'POST /sync/trigger': 'Trigger sync from LMN Authority API (admin)',
+          'POST /sync/trigger': 'Trigger sync from LMN API (admin)',
           'POST /sync/reset': 'Reset cursor for full re-sync (admin)',
         },
         operations: {
@@ -83,7 +83,7 @@ async function createRouter() {
           'GET /settings': 'Get all settings (secrets masked)',
           'PUT /settings/:key': 'Update setting (admin)',
           'DELETE /settings/:key': 'Reset setting to default (admin)',
-          'POST /settings/test-connection': 'Test authority API connection (admin)',
+          'POST /settings/test-connection': 'Test LMN API connection (admin)',
         },
         terminal: {
           'GET /terminal/sessions': 'List active terminal sessions',

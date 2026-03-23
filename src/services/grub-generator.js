@@ -2,7 +2,7 @@
  * LINBO Plugin - GRUB Config Generator (DB-free)
  *
  * Generates GRUB configuration files from data objects (HostRecord[], ConfigRecord[])
- * fetched from the LMN Authority API. Does NOT access Prisma/PostgreSQL.
+ * fetched from the LMN API. Does NOT access Prisma/PostgreSQL.
  *
  * Output files:
  *   /srv/linbo/boot/grub/grub.cfg                     — main PXE config
@@ -166,7 +166,7 @@ async function readKernelOptionsFromStartConf(configId) {
 
 /**
  * Generate a per-config GRUB file ({group}.cfg) with OS menu entries.
- * @param {object} configRecord - ConfigRecord from LMN Authority API
+ * @param {object} configRecord - ConfigRecord from LMN API
  * @param {object} options - { server, httpport, bgColor }
  * @returns {Promise<{filepath: string, content: string}>}
  */
@@ -243,14 +243,14 @@ async function generateConfigGrub(configRecord, options = {}) {
 
 /**
  * Generate main grub.cfg with MAC→inline-boot mapping.
- * @param {object[]} hosts - HostRecord[] from LMN Authority API
+ * @param {object[]} hosts - HostRecord[] from LMN API
  * @param {object[]} configs - ConfigRecord[] (for default group fallback)
  * @param {object} options - { server, httpport }
  * @returns {Promise<{filepath: string, content: string}>}
  */
 async function generateMainGrub(hosts, configs, options = {}) {
-  const server = options.server || process.env.LINBO_SERVER_IP || '10.0.0.1';
-  const httpport = options.httpport || process.env.WEB_PORT || '8080';
+  const _server = options.server || process.env.LINBO_SERVER_IP || '10.0.0.1';
+  const _httpport = options.httpport || process.env.WEB_PORT || '8080';
 
   // Build MAC→group mapping (sets $group variable for configfile fallback)
   let macMapping = '';

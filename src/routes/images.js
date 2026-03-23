@@ -28,7 +28,6 @@ const fs = require('fs').promises;
 const path = require('path');
 const {
   IMAGE_EXTS,
-  IMAGE_SUPPLEMENTS,
   IMAGES_DIR,
   LINBO_DIR,
   READABLE_TYPES,

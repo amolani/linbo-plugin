@@ -10,6 +10,7 @@
  * @returns {string}
  */
 function shellEscapeExact(str) {
+  // eslint-disable-next-line no-useless-escape
   return str.replace(/([\\*?\[\]])/g, '\\$1');
 }
 

@@ -23,7 +23,6 @@ const VALID_VARIANTS = ['stable', 'longterm', 'legacy'];
 const CUSTOM_KERNEL_FILE = path.join(CONFIG_DIR, 'custom_kernel');
 const KERNEL_STATE_FILE = path.join(CONFIG_DIR, 'kernel_state.json');
 const REBUILD_LOCK = path.join(CONFIG_DIR, '.rebuild.lock');
-const PROVISION_LOCK = path.join(KERNEL_VAR_DIR, '..', '.provision.lock');
 
 const DEFAULT_STATE = {
   lastSwitchAt: null,
@@ -301,7 +300,7 @@ async function switchKernel(variant) {
   return { jobId, startedAt, requestedVariant: variant };
 }
 
-async function triggerRebuild(variant, jobId) {
+async function triggerRebuild(variant, _jobId) {
   const scriptPath = process.env.UPDATE_LINBOFS_SCRIPT ||
     '/usr/share/linuxmuster/linbo/update-linbofs.sh';
 

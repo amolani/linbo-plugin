@@ -5,7 +5,7 @@
 
 const express = require('express');
 const router = express.Router();
-const { authenticateToken, requireRole } = require('../middleware/auth');
+const { authenticateToken } = require('../middleware/auth');
 const terminalService = require('../services/terminal.service');
 const sshService = require('../services/ssh.service');
 

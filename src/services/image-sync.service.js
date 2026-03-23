@@ -1,7 +1,7 @@
 /**
  * LINBO Plugin - Image Sync Service
  *
- * Downloads QCOW2 images from the LMN Authority API via HTTP Range requests.
+ * Downloads QCOW2 images from the LMN API via HTTP Range requests.
  * Features: resume support, MD5 verification, atomic directory swap,
  * Redis-backed job queue, WebSocket progress.
  */
@@ -36,12 +36,12 @@ let activeAbort = null;   // AbortController
 let activeStream = null;  // fs.WriteStream
 
 /**
- * Make an authenticated request to the LMN Authority API.
+ * Make an authenticated request to the LMN API.
  * @param {string} urlPath - API path
  * @param {object} options - fetch options
  * @param {object} config - optional override for url/key (from snapshot)
  */
-async function lmnFetch(urlPath, options = {}, config = {}) {
+async function lmnFetch(urlPath, options = {}, _config = {}) {
   const lmnApiClient = require('../lib/lmn-api-client');
   return lmnApiClient.request(urlPath, options);
 }
@@ -51,7 +51,7 @@ async function lmnFetch(urlPath, options = {}, config = {}) {
 // ---------------------------------------------------------------------------
 
 /**
- * Fetch the remote image manifest from the Authority API (60s Redis cache).
+ * Fetch the remote image manifest from the LMN API (60s Redis cache).
  */
 async function getRemoteManifest() {
   const client = redis.getClient();
@@ -554,7 +554,7 @@ async function _downloadSidecar(imageName, filename, stagingDir, config = {}) {
 /**
  * Compute MD5 hash of a file.
  */
-async function _computeMd5(filePath, jobId, imageName) {
+async function _computeMd5(filePath, _jobId, _imageName) {
   return new Promise((resolve, reject) => {
     const hash = crypto.createHash('md5');
     const stream = fs.createReadStream(filePath);

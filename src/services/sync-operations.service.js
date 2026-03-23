@@ -20,7 +20,6 @@ const ws = require('../lib/websocket');
 
 // Reuse command parsing from linbo-commands (these are pure functions, no Prisma)
 const {
-  parseCommands,
   validateCommandString,
   formatCommandsForWrapper,
   listScheduledCommands,

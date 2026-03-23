@@ -19,7 +19,7 @@ const activeStreams = new Map();
 
 // WebSocket broadcast function (injected at init)
 let broadcastFn = null;
-let wssRef = null;
+let _wssRef = null;
 
 /**
  * Initialize container logs module.
@@ -28,7 +28,7 @@ let wssRef = null;
  */
 function init(broadcast, wss) {
   broadcastFn = broadcast;
-  wssRef = wss;
+  _wssRef = wss;
 }
 
 /**

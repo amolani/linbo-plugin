@@ -214,7 +214,7 @@ app.get('/health', async (req, res) => {
   // Sync status
   try {
     const storeClient = redis.getClient();
-    const lastSync = storeClient.getSync ? null : null; // sync API not available
+    const _lastSync = storeClient.getSync ? null : null; // sync API not available
     health.sync = {
       enabled: process.env.SYNC_ENABLED === 'true',
     };
@@ -345,7 +345,7 @@ async function startServer() {
   });
 
   // Global Error Handler (must be after route mounting)
-  app.use((err, req, res, next) => {
+  app.use((err, req, res, _next) => {
     log.error({ err, requestId: req.requestId }, 'Unhandled error');
 
     if (err.name === 'ZodError') {
@@ -477,7 +477,7 @@ async function startServer() {
   const terminalService = require('./services/terminal.service');
   const terminalWss = new WebSocket.Server({ noServer: true });
 
-  terminalWss.on('connection', (ws, req) => {
+  terminalWss.on('connection', (ws, _req) => {
     // User is pre-authenticated in the upgrade handler
     const user = ws.user;
     if (!user) { ws.close(4001, 'Authentication failed'); return; }
@@ -594,7 +594,7 @@ async function startServer() {
 
     if (pathname === '/ws/terminal') {
       // Authenticate terminal WS in upgrade handler (not after connection)
-      const { token, protocol } = extractWsToken(request);
+      const { token } = extractWsToken(request);
       let user;
       try {
         user = verifyToken(token);
@@ -604,13 +604,12 @@ async function startServer() {
         return;
       }
 
-      const upgradeOpts = protocol ? { protocol } : undefined;
       terminalWss.handleUpgrade(request, socket, head, (ws) => {
         ws.user = user;
         terminalWss.emit('connection', ws, request);
       });
     } else if (pathname === '/ws') {
-      const { token, protocol } = extractWsToken(request);
+      const { token } = extractWsToken(request);
       const user = verifyWsToken(token);
 
       if (!user) {
@@ -713,12 +712,15 @@ async function startServer() {
   const { LINBO_DIR, IMAGES_DIR } = require('./lib/image-path');
   const CONFIG_DIR = process.env.CONFIG_DIR || '/etc/linuxmuster/linbo';
   const HOOKS_DIR = process.env.HOOKSDIR || `${CONFIG_DIR}/hooks`;
+  const STORE_DIR = require('path').dirname(process.env.STORE_SNAPSHOT || '/var/lib/linbo-native/store.json');
   const criticalPaths = [
     { path: LINBO_DIR, desc: 'LINBO root' },
     { path: `${LINBO_DIR}/boot/grub`, desc: 'GRUB config dir' },
+    { path: `${LINBO_DIR}/boot/grub/hostcfg`, desc: 'GRUB hostcfg dir' },
     { path: `${LINBO_DIR}/dhcp`, desc: 'DHCP config dir' },
     { path: `${LINBO_DIR}/dhcp/devices`, desc: 'DHCP devices dir' },
     { path: IMAGES_DIR, desc: 'Images dir' },
+    { path: STORE_DIR, desc: 'Store snapshot dir' },
     { path: `${HOOKS_DIR}/update-linbofs.pre.d`, desc: 'Pre-hooks dir' },
     { path: `${HOOKS_DIR}/update-linbofs.post.d`, desc: 'Post-hooks dir' },
   ];
@@ -926,7 +928,7 @@ process.on('uncaughtException', (err) => {
   shutdown('uncaughtException');
 });
 
-process.on('unhandledRejection', (reason, promise) => {
+process.on('unhandledRejection', (reason, _promise) => {
   log.fatal({ reason }, 'Unhandled Rejection');
   shutdown('unhandledRejection');
 });

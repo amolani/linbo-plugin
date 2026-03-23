@@ -67,7 +67,7 @@ async function runAllChecks() {
             } catch { resolve('ok'); }
           });
         });
-        req.on('error', (err) => reject(new Error('unreachable')));
+        req.on('error', (_err) => reject(new Error('unreachable')));
         req.on('timeout', () => { req.destroy(); reject(new Error('timeout')); });
       });
     }),
