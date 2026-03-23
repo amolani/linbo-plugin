@@ -835,6 +835,23 @@ LINBO Plugin API Server (sync-only)
   Health:       http://${HOST}:${PORT}/health
   Environment:  ${process.env.NODE_ENV || 'development'}
     `);
+
+    // systemd watchdog: notify READY + periodic WATCHDOG heartbeat
+    const sdNotify = process.env.NOTIFY_SOCKET;
+    if (sdNotify) {
+      const dgram = require('dgram');
+      const sock = dgram.createSocket('unix_dgram');
+      const notify = (msg) => { try { sock.send(msg, sdNotify); } catch {} };
+
+      notify('READY=1');
+      console.log('  systemd: READY notified');
+
+      // Heartbeat every 25s (WatchdogSec=60s, must be < half)
+      const watchdog = setInterval(() => notify('WATCHDOG=1'), 25000);
+      watchdog.unref();
+      server._watchdogTimer = watchdog;
+      server._sdSocket = sock;
+    }
   });
 }
 
@@ -847,6 +864,8 @@ async function shutdown(signal) {
   // Clear background timers immediately
   if (server._storeAutoSave) clearInterval(server._storeAutoSave);
   if (server._storeGcTimer) clearInterval(server._storeGcTimer);
+  if (server._watchdogTimer) clearInterval(server._watchdogTimer);
+  if (server._sdSocket) try { server._sdSocket.close(); } catch {};
 
   server.close(async () => {
     console.log('HTTP server closed');

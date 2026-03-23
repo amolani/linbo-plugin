@@ -17,6 +17,7 @@ router.use('/', require('./hooks'));
 router.use('/', require('./torrent'));
 router.use('/', require('./multicast'));
 router.use('/', require('./boot-logs'));
+router.use('/', require('./monitoring'));
 
 // --- API Log Catchup Endpoint ---
 /**

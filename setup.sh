@@ -727,6 +727,12 @@ linbo ALL=(root) NOPASSWD: /usr/sbin/dhcpd -t -cf *
 SUDOEOF
     chmod 440 /etc/sudoers.d/linbo-services
     log_ok "sudoers configured for linbo service management"
+
+    # Install monitoring (health check cron + morning report)
+    if [[ -x "$SCRIPT_DIR/scripts/monitoring/install-monitoring.sh" ]]; then
+        "$SCRIPT_DIR/scripts/monitoring/install-monitoring.sh" >/dev/null 2>&1
+        log_ok "Monitoring installed (health check every 5min, morning report 06:00)"
+    fi
 }
 
 # =============================================================================

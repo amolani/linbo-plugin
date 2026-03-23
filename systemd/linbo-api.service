@@ -5,7 +5,7 @@ After=network.target linbo-setup.service
 Requires=linbo-setup.service
 
 [Service]
-Type=simple
+Type=notify
 User=linbo
 Group=linbo
 WorkingDirectory=/srv/linbo-api
@@ -13,6 +13,7 @@ EnvironmentFile=/etc/linbo-native/.env
 ExecStart=/usr/bin/node /srv/linbo-api/src/index.js
 Restart=on-failure
 RestartSec=5s
+WatchdogSec=60s
 StartLimitIntervalSec=120s
 StartLimitBurst=5
 TimeoutStopSec=30s
