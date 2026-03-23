@@ -631,14 +631,15 @@ async function deleteFile(folderName, relPath) {
   const filePath = await resolveAndValidate(safeName, safeRelPath);
 
   try {
-    await fs.access(filePath);
-  } catch {
-    const err = new Error(`File not found: ${safeRelPath}`);
-    err.statusCode = 404;
-    throw err;
+    await fs.unlink(filePath);
+  } catch (unlinkErr) {
+    if (unlinkErr.code === 'ENOENT') {
+      const err = new Error(`File not found: ${safeRelPath}`);
+      err.statusCode = 404;
+      throw err;
+    }
+    throw unlinkErr;
   }
-
-  await fs.unlink(filePath);
 
   ws.broadcast('drivers.file_deleted', { folder: safeName, path: safeRelPath });
 
@@ -654,12 +655,16 @@ async function deleteProfile(folderName) {
   const safeName = sanitizeName(folderName);
   const dirPath = await resolveAndValidate(safeName);
 
+  // Use readdir instead of access to avoid TOCTOU race
   try {
-    await fs.access(dirPath);
-  } catch {
-    const err = new Error(`Profile not found: ${safeName}`);
-    err.statusCode = 404;
-    throw err;
+    await fs.readdir(dirPath);
+  } catch (readErr) {
+    if (readErr.code === 'ENOENT') {
+      const err = new Error(`Profile not found: ${safeName}`);
+      err.statusCode = 404;
+      throw err;
+    }
+    throw readErr;
   }
 
   await fs.rm(dirPath, { recursive: true, force: true });
@@ -843,6 +848,7 @@ async function _doExtract(safeName, profileDir, archivePath, originalName) {
     try {
       await execFileAsync('7z', ['x', `-o${tmpDir}`, '-aoa', archivePath], {
         maxBuffer: 10 * 1024 * 1024,
+        timeout: 600000, // 10 min
       });
       // Validate: no extracted file escapes tmpDir, remove symlinks before move
       await validateExtractedPaths(tmpDir);
@@ -946,6 +952,7 @@ async function _doExtract(safeName, profileDir, archivePath, originalName) {
     try {
       await execFileAsync('unzip', ['-o', '-K', archivePath, '-d', tmpDir], {
         maxBuffer: 10 * 1024 * 1024,
+        timeout: 600000, // 10 min
       });
       // Validate: no extracted file escapes tmpDir, remove symlinks before move
       await validateExtractedPaths(tmpDir);
