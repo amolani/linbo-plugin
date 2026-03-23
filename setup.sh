@@ -572,9 +572,8 @@ ADMIN_USERNAME=admin
 ADMIN_PASSWORD=Muster!
 
 # === TLS ===
-# Only disable cert verification when connecting to LMN server (self-signed certs)
-NODE_TLS_REJECT_UNAUTHORIZED=${SYNC_ENABLED:+0}
-NODE_TLS_REJECT_UNAUTHORIZED=${NODE_TLS_REJECT_UNAUTHORIZED:-1}
+# TLS cert verification (disabled for self-signed LMN server certs when sync enabled)
+NODE_TLS_REJECT_UNAUTHORIZED=$([ "$SYNC_ENABLED" = "true" ] && echo 0 || echo 1)
 
 # === SSH ===
 LINBO_CLIENT_SSH_KEY=/etc/linuxmuster/linbo/ssh_host_rsa_key_client
