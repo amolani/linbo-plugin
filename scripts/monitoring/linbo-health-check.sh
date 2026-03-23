@@ -100,7 +100,7 @@ check "SSH client key" yes \
 
 # 8. DHCP leases (are clients getting IPs?)
 check "DHCP leases" no \
-  'leases=$(grep -c "^lease " /var/lib/dhcp/dhcpd.leases 2>/dev/null || echo 0); echo "${leases} leases" ; [[ "$leases" -gt 0 ]] || false'
+  'leases=$(grep -c "^lease " /var/lib/dhcp/dhcpd.leases 2>/dev/null); leases=${leases:-0}; echo "${leases} leases"; [[ "$leases" -gt 0 ]] || false'
 
 # 9. Port reachability
 check "Port 69/udp (TFTP)" yes \
