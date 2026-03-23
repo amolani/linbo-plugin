@@ -1,0 +1,61 @@
+# LINBO start.conf — Test Fixture
+# This is a comment
+
+[LINBO]
+Cache = /dev/sda3
+Server = 10.0.0.1
+Group = focal
+RootTimeout = 600
+AutoPartition = no
+AutoFormat = no
+AutoInitCache = no
+DownloadType = torrent
+BackgroundFontColor = white
+ConsoleFontColorStdout = lightgreen
+ConsoleFontColorStderr = orange
+SystemType = bios64
+KernelOptions = quiet splash server=10.0.0.1 dhcpretry=5
+
+[Partition]
+Dev = /dev/sda1
+Label = ubuntu
+Size = 50000
+Id = 83
+FSType = ext4
+Bootable = yes
+
+[Partition]
+Dev = /dev/sda2
+Label = swap
+Size = 4000
+Id = 82
+FSType = swap
+Bootable = no
+
+[Partition]
+Dev = /dev/sda3
+Label = cache
+Size = 50000
+Id = 83
+FSType = ext4
+Bootable = no
+
+[OS]
+Name = Ubuntu 22.04
+Version =
+Description = Ubuntu 22.04 LTS
+IconName = ubuntu.png
+Image =
+BaseImage = ubuntu22.qcow2
+Boot = /dev/sda1
+Root = /dev/sda1
+Kernel = /boot/vmlinuz
+Initrd = /boot/initrd.img
+Append = ro splash
+StartEnabled = yes
+SyncEnabled = yes
+NewEnabled = yes
+Autostart = no
+AutostartTimeout = 5
+DefaultAction = sync
+Hidden = no

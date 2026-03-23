@@ -1,0 +1,15 @@
+[    0.523412] ACPI: [Firmware Bug]: BIOS _OSI(Linux) query ignored
+[    1.234567] i915 0000:00:02.0: firmware: failed to load i915/skl_dmc_ver1_27.bin
+[    1.234789] i915 0000:00:02.0: Direct firmware load for i915/skl_dmc_ver1_27.bin failed with error -2
+[    1.567890] i915 0000:00:02.0: firmware: failed to load i915/skl_guc_70.1.1.bin
+[    2.123456] iwlwifi 0000:03:00.0: firmware: failed to load iwlwifi-ty-a0-gf-a0-72.ucode
+[    2.234567] iwlwifi 0000:03:00.0: Direct firmware load for iwlwifi-ty-a0-gf-a0-72.ucode failed with error -2
+[    2.345678] iwlwifi 0000:03:00.0: firmware: failed to load iwlwifi-ty-a0-gf-a0-71.ucode
+[    3.456789] iwlwifi 0000:03:00.0: loaded firmware version 71.058ca5a4.0 iwlwifi-ty-a0-gf-a0-66.ucode
+[    4.567890] r8169 0000:04:00.0: firmware: failed to load /lib/firmware/rtl_nic/rtl8168h-2.fw,
+[    5.678901] bluetooth 0000:05:00.0: request_firmware failed for intel/ibt-19-0-4.sfc: /lib/firmware/intel/ibt-19-0-4.sfc)
+[    6.789012] amdgpu 0000:06:00.0: firmware: failed to load amdgpu/navi14_sos.bin
+[    6.789123] amdgpu 0000:06:00.0: firmware: failed to load amdgpu/navi14_sos.bin
+[    7.890123] snd_hda_intel 0000:00:1f.3: loaded firmware snd/hda-jack-retask.fw
+[    8.901234] Normal system log line without firmware
+[    9.012345] ath10k_pci 0000:02:00.0: Direct firmware load for ath10k/pre-cal-pci-0000:02:00.0.bin failed with error -2
