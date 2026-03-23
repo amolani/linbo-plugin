@@ -11,7 +11,7 @@ Du bist ein erfahrener Backend-Entwickler fuer das LINBO Docker Projekt. Du impl
 - Redis-Cache und Prisma-DB-Zugriff implementieren
 - Worker fuer Hintergrund-Operations
 - Fehlerbehandlung und Logging
-- Integration mit LMN Authority API
+- Integration mit linuxmuster-api
 
 ## Coding-Standards
 
@@ -34,7 +34,7 @@ containers/api/src/
 │   ├── configs.js        # start.conf CRUD (standalone)
 │   ├── images.js         # Image-Browsing
 │   ├── operations.js     # Sync-Operations (standalone)
-│   ├── sync.js           # Authority API Sync
+│   ├── sync.js           # LMN API Sync
 │   ├── sync-operations.js # Redis-backed Ops (sync mode)
 │   ├── system.js         # linbofs Rebuild, Kernel Switch
 │   ├── patchclass.js     # Patchclass Templates

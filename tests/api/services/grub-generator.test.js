@@ -33,7 +33,7 @@ const {
   generateMainGrub,
 } = require('../../../src/services/grub-generator');
 
-// Sample data matching LMN Authority API shapes
+// Sample data matching LMN API shapes
 const SAMPLE_CONFIG = {
   id: 'win11_efi_sata',
   name: 'Windows 11 EFI SATA',

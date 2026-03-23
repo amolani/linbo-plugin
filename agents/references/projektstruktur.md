@@ -66,7 +66,7 @@ linbo-docker/
 │   │   │       ├── prisma.js     # DB-Connection (optional)
 │   │   │       ├── redis.js      # Redis-Client
 │   │   │       ├── websocket.js  # WS-Broadcast
-│   │   │       ├── lmn-api-client.js  # Authority API Client
+│   │   │       ├── lmn-api-client.js  # LMN API Client
 │   │   │       ├── startconf-rewrite.js
 │   │   │       └── ...
 │   │   └── tests/                # Jest-Tests
@@ -115,7 +115,7 @@ linbo-docker/
 ├── themes/                       # GRUB-Themes
 ├── volumes/                      # Docker-Volume-Daten
 │
-└── lmn-authority-api/            # Authority API (Python/FastAPI)
+└── docs/                         # Weitere Dokumentation
     └── ...
 ```
 

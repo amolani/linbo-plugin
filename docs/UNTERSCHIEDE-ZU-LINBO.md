@@ -17,7 +17,7 @@ Dieses Dokument beschreibt alle Abweichungen und Erweiterungen, die LINBO Docker
    - [2.4 Web Terminal (xterm.js)](#24-web-terminal-xtermjs)
    - [2.5 GRUB Theme Customization](#25-grub-theme-customization)
    - [2.6 React Frontend (16 Seiten)](#26-react-frontend-16-seiten)
-   - [2.7 Sync-Modus (Authority API Integration)](#27-sync-modus-authority-api-integration)
+   - [2.7 Sync-Modus (linuxmuster-api Integration)](#27-sync-modus-linuxmuster-api-integration)
 3. [Infrastruktur-Verbesserungen](#3-infrastruktur-verbesserungen)
    - [3.1 Auto-Key-Provisioning](#31-auto-key-provisioning)
    - [3.2 TFTP Race Condition Fix](#32-tftp-race-condition-fix)
@@ -37,7 +37,7 @@ Dieses Dokument beschreibt alle Abweichungen und Erweiterungen, die LINBO Docker
 | Web Terminal (xterm.js) | Nur CLI (`linbo-ssh`) | Browser-Terminal mit Tab-System | Neues Feature |
 | GRUB Theme UI | Manuelle Konfiguration | Web-basierter Editor | Neues Feature |
 | React Frontend | PHP webui7 | 16 Seiten, Dark Theme, WebSocket-Live-Updates | Neues Feature |
-| Sync-Modus (Authority API) | Nicht vorhanden | Read-Only Delta-Feed von LMN Authority | Neues Feature |
+| Sync-Modus (linuxmuster-api) | Nicht vorhanden | Read-Only Delta-Feed von linuxmuster-api | Neues Feature |
 | Auto-Key-Provisioning | Manuelle Installation | Automatische Generierung beim Container-Start | Infrastruktur |
 | TFTP Race Condition Fix | N/A | Marker-basiertes Warten auf gebautes linbofs64 | Infrastruktur |
 | Keine Boot-Patches noetig | N/A | Vanilla LINBO bootet korrekt mit Host-Kernel | Verifiziert 2026-03-05 |
@@ -443,12 +443,12 @@ Keine grafische Verwaltung. Alle Operationen muessten ueber die REST-API oder Ko
 
 ---
 
-### 2.7 Sync-Modus (Authority API Integration)
+### 2.7 Sync-Modus (linuxmuster-api Integration)
 
 **Was es macht:**
-Integration mit einem bestehenden linuxmuster.net-Server als "Authority" (Datenquelle):
+Integration mit einem bestehenden linuxmuster.net-Server als Datenquelle:
 
-- **Cursor-basierter Delta-Feed:** Nur Aenderungen seit dem letzten Sync werden abgerufen (Endpunkt `:8400`)
+- **Cursor-basierter Delta-Feed:** Nur Aenderungen seit dem letzten Sync werden abgerufen (Endpunkt `:8001`)
 - **Redis als Cache:** Hosts, Configs und Rooms werden als `sync:host:{mac}`, `sync:config:{group}` etc. gecacht
 - **Read-Only fuer LMN-Daten:** Host/Config/Room CRUD-Endpunkte geben `409 SYNC_MODE_ACTIVE` zurueck
 - **start.conf server= Umschreibung:** Die Server-IP in heruntergeladenen start.conf-Dateien wird auf die Docker-IP umgeschrieben
@@ -467,7 +467,7 @@ Standalone:  Alle Routen mit vollem Prisma-Support
 LINBO Docker soll als Ergaenzung zu einem bestehenden linuxmuster.net-Server betrieben werden koennen, ohne die Host- und Konfigurationsdaten doppelt pflegen zu muessen. Der Sync-Modus macht LINBO Docker zum "Satellite-Server".
 
 **Was Vanilla-LINBO stattdessen macht:**
-Kein Multi-Server-Konzept. LINBO ist integraler Bestandteil des linuxmuster.net-Servers. Es gibt keine Authority-API, keinen Delta-Feed und keinen Read-Only-Modus.
+Kein Multi-Server-Konzept. LINBO ist integraler Bestandteil des linuxmuster.net-Servers. Es gibt keinen LINBO-Router in der linuxmuster-api, keinen Delta-Feed und keinen Read-Only-Modus.
 
 **Auswirkung wenn fehlend:**
 LINBO Docker kann nur standalone betrieben werden. Alle Hosts und Konfigurationen muessen manuell angelegt werden, auch wenn bereits ein linuxmuster.net-Server existiert.

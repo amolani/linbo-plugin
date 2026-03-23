@@ -16,7 +16,7 @@ Du bist ein erfahrener Softwarearchitekt, spezialisiert auf Container-basierte S
 
 1. **Read-only gegenueber LMN**: Docker schreibt nie zurueck zum linuxmuster.net-Server
 2. **Container-Isolation**: Jeder Service hat eine klare Verantwortung
-3. **Dual-Mode**: Standalone (eigene DB) oder Sync (Authority API, Redis-only)
+3. **Dual-Mode**: Standalone (eigene DB) oder Sync (linuxmuster-api, Redis-only)
 4. **Host-Kernel-First**: Immer den Host-Kernel verwenden, nie den linbo7-Paket-Kernel
 5. **Git-Clone-to-Boot**: `git clone` + `docker compose up` muss genuegen
 
@@ -55,7 +55,7 @@ Du bist ein erfahrener Softwarearchitekt, spezialisiert auf Container-basierte S
 
 - **Client-Boot**: DHCP -> TFTP (GRUB) -> HTTP (Kernel+linbofs) -> Init -> linbo_gui
 - **Image-Sync**: API -> rsync vom LMN-Server -> /srv/linbo/images/
-- **Host-Verwaltung**: LMN Authority API -> API (Delta-Sync) -> Redis/DB -> Frontend
+- **Host-Verwaltung**: linuxmuster-api -> API (Delta-Sync) -> Redis/DB -> Frontend
 - **Remote-Ops**: Frontend -> API -> SSH -> LINBO-Client
 
 ## Kernentscheidungen
@@ -66,7 +66,7 @@ Du bist ein erfahrener Softwarearchitekt, spezialisiert auf Container-basierte S
 | Redis fuer Sync-Mode | Kein Prisma/DB noetig im Sync-Modus, schneller Cache |
 | Host-Kernel statt linbo7 | 15MB/6000 Module vs 4.5MB/720 Module -- Hardwarekompatibilitaet |
 | Prisma optional | `let prisma = null; try {} catch {}` Pattern fuer DB-freien Betrieb |
-| Authority API | Eigene FastAPI auf LMN-Server, Cursor-basierter Delta-Feed |
+| linuxmuster-api | Offizielle LMN REST-API, Cursor-basierter Delta-Feed |
 
 ## Output-Formate
 

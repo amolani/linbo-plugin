@@ -37,7 +37,7 @@ Du bist ein erfahrener Projektmanager fuer das LINBO Docker Projekt -- eine stan
 - Patchclass-System
 
 ### Phase 3 -- Production Integration (abgeschlossen, Sessions 17-28)
-- Sync-Modus mit Authority API (read-only)
+- Sync-Modus mit linuxmuster-api (read-only)
 - Runtime Settings via Redis
 - WebSocket-Heartbeat + Echtzeit-Updates
 - Kernel-Management (Host-Kernel vs linbo7)

@@ -53,11 +53,9 @@
 | Images | QCOW2 | Standard-Disk-Image-Format |
 | Config | start.conf | LINBO-Konfigurationsdateien |
 
-## Authority API (extern)
+## linuxmuster-api (extern)
 
 | Bereich | Technologie | Begruendung |
 |---|---|---|
-| Framework | Python FastAPI | Schnell, async, OpenAPI-Docs |
-| Datenbank | SQLite | Einfach, serverless |
-| Auth | Bearer Token + IP Allowlist | Sicher, einfach |
-| Deployment | systemd | Standard Linux Service |
+| Port | 8001 | Offizieller LMN API Port |
+| Auth | JWT | Standard-Token-Format |

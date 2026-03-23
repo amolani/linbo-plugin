@@ -204,7 +204,7 @@ prompt_lmn_connection() {
 
     if [[ -z "$server_info" || "$server_info" == *"detail"* ]]; then
         log_warn "server-info endpoint not available. Manual configuration required."
-        log_warn "You may need to update the Authority API on your LMN server."
+        log_warn "You may need to update the LINBO router on your LMN server."
         prompt_manual_network
         return 0
     fi

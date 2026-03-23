@@ -117,7 +117,6 @@ Die wichtigsten Variablen in der generierten `.env`:
 | `ADMIN_PASSWORD` | Web-UI Administrator-Passwort | `Muster!` |
 | `SYNC_ENABLED` | Sync-Modus aktivieren | `false` |
 | `LMN_API_URL` | URL der linuxmuster.net API | `https://10.0.0.11:8001` |
-| `LMN_API_KEY` | API-Key fuer Sync-Authentifizierung | leer |
 | `WEB_PORT` | Port fuer das Web-Interface | `8080` |
 | `API_PORT` | Port fuer die REST API | `3000` |
 
@@ -342,9 +341,9 @@ linbo_gui --> LINBO-GUI erscheint mit Gruppen-Buttons
 
 Der Sync-Modus verbindet LINBO Docker mit einem bestehenden linuxmuster.net-Server. Hosts, Configs und Rooms werden ausschliesslich auf dem LMN-Server verwaltet -- Docker ist **permanent read-only** fuer diese Daten und konsumiert sie via Cursor-basiertem Delta-Feed.
 
-### Voraussetzung: Authority API
+### Voraussetzung: linuxmuster-api
 
-Auf dem LMN-Server muss eine API laufen, die den Delta-Feed bereitstellt (z.B. die linuxmuster.net-API auf Port 8001 oder die Authority API auf Port 8400).
+Auf dem LMN-Server muss die linuxmuster-api auf Port 8001 laufen, die den Delta-Feed bereitstellt.
 
 ### Konfiguration
 
@@ -352,11 +351,12 @@ In der `.env`-Datei:
 
 ```bash
 SYNC_ENABLED=true
-LMN_API_URL=http://10.0.0.11:8001
-LMN_API_KEY=<api-key>
+LMN_API_URL=https://10.0.0.11:8001
+LMN_API_USER=global-admin
+LMN_API_PASSWORD=<passwort>
 ```
 
-Ersetzen Sie `10.0.0.11` durch die IP Ihres LMN-Servers und `<api-key>` durch den entsprechenden API-Key.
+Ersetzen Sie `10.0.0.11` durch die IP Ihres LMN-Servers und die Credentials durch einen `globaladministrator`-Benutzer.
 
 Container mit neuer Konfiguration neu erstellen:
 

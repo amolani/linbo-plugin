@@ -2,39 +2,9 @@
 
 ## Uebersicht
 
-LINBO Docker kommuniziert mit dem linuxmuster.net-Server ueber einen HTTP-API-Client (`containers/api/src/lib/lmn-api-client.js`). Dieser Client unterstuetzt zwei Authentifizierungsmodi, die automatisch anhand der konfigurierten URL erkannt werden:
-
-- **Port 8001** (`linuxmuster-api`): JWT-Authentifizierung via HTTP Basic Auth
-- **Port 8400** (Legacy Authority API): Statischer Bearer Token
+LINBO Docker kommuniziert mit dem linuxmuster.net-Server ueber einen HTTP-API-Client (`containers/api/src/lib/lmn-api-client.js`). Der Client authentifiziert sich per JWT via HTTP Basic Auth gegen die linuxmuster-api (Port 8001).
 
 Der Client wird ausschliesslich im **Sync-Modus** verwendet, um Hosts, Start-Konfigurationen, DHCP-Daten und Health-Status vom LMN-Server abzurufen. LINBO Docker liest nur Daten -- es schreibt niemals zurueck.
-
----
-
-## Auto-Detection
-
-Die Funktion `_detectMode(baseUrl)` in `lmn-api-client.js` (Zeile 30-38) erkennt den API-Modus anhand des Ports der konfigurierten URL:
-
-```javascript
-function _detectMode(baseUrl) {
-  try {
-    const url = new URL(baseUrl);
-    if (url.port === '8001') {
-      return { pathPrefix: '/v1/linbo', useJwt: true };
-    }
-  } catch { /* fall through */ }
-  return { pathPrefix: '/api/v1/linbo', useJwt: false };
-}
-```
-
-| Port | `pathPrefix` | `useJwt` | Modus |
-|------|-------------|----------|-------|
-| 8001 | `/v1/linbo` | `true` | linuxmuster-api (JWT) |
-| Alle anderen | `/api/v1/linbo` | `false` | Legacy Authority API (Bearer Token) |
-
-Die Erkennung basiert ausschliesslich auf dem Port. Ist der Port `8001`, wird JWT-Auth verwendet. Fuer alle anderen Ports (insbesondere `8400`) wird Bearer-Token-Auth angenommen.
-
-Bei einem URL-Parse-Fehler (z.B. ungueltige URL) faellt die Erkennung auf den Legacy-Modus zurueck.
 
 ---
 
@@ -54,7 +24,7 @@ const lmnPass = await getSettings().get('lmn_api_password');
 ```
 
 Fehlen diese Werte, wird ein sprechender Fehler geworfen:
-> `lmn_api_user and lmn_api_password required for linuxmuster-api (port 8001). Set via settings API or use port 8400 with lmn_api_key for legacy mode.`
+> `lmn_api_user and lmn_api_password required for linuxmuster-api (port 8001).`
 
 #### 2. HTTP Basic Auth Login
 
@@ -111,10 +81,10 @@ Ist der Token abgelaufen oder innerhalb des 5-Minuten-Puffers, wird automatisch 
 
 #### 6. 401-Retry bei abgelaufenem Token
 
-Wenn ein API-Request mit Status `401 Unauthorized` fehlschlaegt und JWT-Modus aktiv ist, wird der Token-Cache geloescht und **einmal** ein neuer Token geholt (nur beim ersten Versuch, `attempt === 0`):
+Wenn ein API-Request mit Status `401 Unauthorized` fehlschlaegt, wird der Token-Cache geloescht und **einmal** ein neuer Token geholt (nur beim ersten Versuch, `attempt === 0`):
 
 ```javascript
-if (response.status === 401 && useJwt && attempt === 0) {
+if (response.status === 401 && attempt === 0) {
   _jwtToken = null;
   _jwtExpiry = 0;
   token = await _getJwtToken(lmnApiUrl);
@@ -125,43 +95,11 @@ if (response.status === 401 && useJwt && attempt === 0) {
 
 #### 7. Request-Header
 
-Im JWT-Modus wird der Token als `X-API-Key`-Header gesendet (nicht als `Authorization: Bearer`):
+Der JWT-Token wird als `X-API-Key`-Header gesendet (nicht als `Authorization: Bearer`):
 
 ```
 X-API-Key: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 ```
-
----
-
-## Bearer-Auth (Port 8400, Legacy Authority API)
-
-### Ablauf
-
-Die Legacy-Authentifizierung ist deutlich einfacher:
-
-1. Der statische API-Key wird aus den Settings gelesen:
-   ```javascript
-   token = await getSettings().get('lmn_api_key');
-   ```
-
-2. Der Token wird als `Authorization: Bearer`-Header gesendet:
-   ```
-   Authorization: Bearer <api-key>
-   ```
-
-Es gibt kein Login, kein Caching und kein Token-Refresh. Der API-Key ist statisch und muss manuell in der Authority API konfiguriert werden.
-
-### Unterschiede zum JWT-Modus
-
-| Eigenschaft | JWT (Port 8001) | Bearer (Port 8400) |
-|-------------|-----------------|---------------------|
-| Auth-Header | `X-API-Key: <jwt>` | `Authorization: Bearer <key>` |
-| Login noetig | Ja (`GET /v1/auth/`) | Nein |
-| Token-Typ | Dynamisch (JWT, 1h) | Statisch |
-| Credentials | Username + Passwort | API-Key |
-| Token-Refresh | Automatisch (5min Puffer) | Nicht noetig |
-| 401-Retry | Ja (einmal) | Nein |
-| API-Pfade | `/v1/linbo/*` | `/api/v1/linbo/*` |
 
 ---
 
@@ -171,10 +109,9 @@ Alle relevanten Settings werden in `containers/api/src/services/settings.service
 
 | Key | Env Var | Default | Geheim | Beschreibung |
 |-----|---------|---------|--------|-------------|
-| `lmn_api_url` | `LMN_API_URL` | `http://10.0.0.11:8001` | Nein | API Base URL. Der Port bestimmt den Auth-Modus (8001=JWT, 8400=Bearer). |
-| `lmn_api_key` | `LMN_API_KEY` | (leer) | Ja | Statischer Bearer Token fuer die Legacy Authority API (Port 8400). |
-| `lmn_api_user` | `LMN_API_USER` | (leer) | Nein | Username fuer JWT-Auth (Port 8001, linuxmuster-api). |
-| `lmn_api_password` | `LMN_API_PASSWORD` | (leer) | Ja | Passwort fuer JWT-Auth (Port 8001, linuxmuster-api). |
+| `lmn_api_url` | `LMN_API_URL` | `http://10.0.0.11:8001` | Nein | API Base URL (linuxmuster-api, Port 8001). |
+| `lmn_api_user` | `LMN_API_USER` | (leer) | Nein | Username fuer JWT-Auth (linuxmuster-api). |
+| `lmn_api_password` | `LMN_API_PASSWORD` | (leer) | Ja | Passwort fuer JWT-Auth (linuxmuster-api). |
 | `sync_enabled` | `SYNC_ENABLED` | `false` | Nein | Aktiviert den Sync-Modus (Delta-Feed vom LMN-Server). |
 | `sync_interval` | `SYNC_INTERVAL` | `0` | Nein | Auto-Sync Intervall in Sekunden (0 = deaktiviert). |
 
@@ -187,13 +124,13 @@ Alle relevanten Settings werden in `containers/api/src/services/settings.service
 ### Geheime Werte
 
 Geheime Settings (`secret: true`) werden in `getAll()` maskiert:
-- `lmn_api_key` und `lmn_api_password`: Nur die letzten 4 Zeichen sichtbar (`****abcd`)
+- `lmn_api_password`: Nur die letzten 4 Zeichen sichtbar (`****abcd`)
 - `admin_password_hash`: Nie sichtbar, nur `isSet: true/false`
 
 ### Aendern via API
 
 ```bash
-# URL setzen (bestimmt den Auth-Modus)
+# URL setzen
 curl -X PUT http://localhost:3000/api/v1/settings/lmn_api_url \
   -H "Authorization: Bearer <jwt>" \
   -H "Content-Type: application/json" \
@@ -229,15 +166,14 @@ Nach jedem `set()` oder `reset()` wird der Cache invalidiert und ein WebSocket-E
 
 ## Docker-Compose Konfiguration
 
-Die relevanten Environment-Variablen im `api`-Service (`docker-compose.yml`, Zeile 153-158):
+Die relevanten Environment-Variablen im `api`-Service (`docker-compose.yml`):
 
 ```yaml
 api:
   environment:
-    # Sync (LMN API -- port 8001=linuxmuster-api, 8400=legacy)
+    # Sync (linuxmuster-api, Port 8001, JWT)
     - SYNC_ENABLED=${SYNC_ENABLED:-false}
     - LMN_API_URL=${LMN_API_URL:-https://10.0.0.11:8001}
-    - LMN_API_KEY=${LMN_API_KEY:-}
     - LMN_API_USER=${LMN_API_USER:-}
     - LMN_API_PASSWORD=${LMN_API_PASSWORD:-}
     - NODE_TLS_REJECT_UNAUTHORIZED=${NODE_TLS_REJECT_UNAUTHORIZED:-0}
@@ -253,11 +189,6 @@ SYNC_ENABLED=true
 LMN_API_URL=https://10.0.0.11:8001
 LMN_API_USER=global-admin
 LMN_API_PASSWORD=Muster!
-
-# .env (Beispiel fuer Legacy Authority API)
-SYNC_ENABLED=true
-LMN_API_URL=http://10.0.0.11:8400
-LMN_API_KEY=my-secret-api-key
 ```
 
 Die Werte aus der `.env`-Datei werden als Defaults verwendet. Via Settings API (Redis) koennen sie zur Laufzeit ueberschrieben werden, ohne den Container neu zu starten.
@@ -285,14 +216,9 @@ Alle Felder sind optional. Fehlende Werte werden aus den gespeicherten Settings 
 ### Ablauf
 
 1. **URL bestimmen**: `req.body.url` oder gespeichertes `lmn_api_url`
-2. **Modus erkennen**: Port `8001` = JWT, sonst = Bearer Token
-3. **Authentifizierung**:
-   - **JWT-Modus**: Login via `GET {url}/v1/auth/` mit HTTP Basic Auth, Quote-Stripping des JWT-Tokens
-   - **Bearer-Modus**: Statischen API-Key aus `req.body.key` oder Settings laden
-4. **Health-Check**:
-   - **JWT-Modus**: `GET {url}/v1/linbo/health` mit `X-API-Key`-Header
-   - **Bearer-Modus**: `GET {url}/health` mit `Authorization: Bearer`-Header
-5. **Response**: Ergebnis mit Status, Latenz und erkanntem Auth-Modus
+2. **Authentifizierung**: Login via `GET {url}/v1/auth/` mit HTTP Basic Auth, Quote-Stripping des JWT-Tokens
+3. **Health-Check**: `GET {url}/v1/linbo/health` mit `X-API-Key`-Header
+4. **Response**: Ergebnis mit Status, Latenz und Auth-Modus
 
 ### Response
 
@@ -314,7 +240,7 @@ Alle Felder sind optional. Fehlende Werte werden aus den gespeicherten Settings 
 | `healthy` | boolean | Health-Endpoint gibt `{ status: "ok" }` zurueck |
 | `version` | string/null | API-Version aus Health-Response |
 | `latency` | number | Round-Trip-Zeit in Millisekunden |
-| `authMode` | string | Erkannter Modus: `"jwt"` oder `"token"` |
+| `authMode` | string | `"jwt"` |
 
 ### Timeout
 
@@ -368,8 +294,8 @@ Berechnung: `delay = BASE_DELAY * 2^attempt` = 500ms, 1000ms, 2000ms
 | Status-Code | Verhalten |
 |-------------|-----------|
 | `2xx` (Erfolg) | Sofort zurueckgeben |
-| `401` (JWT-Modus, 1. Versuch) | Token-Cache loeschen, neuen Token holen, retry |
-| `401` (JWT-Modus, 2.+ Versuch) | Sofort zurueckgeben (kein weiterer Retry) |
+| `401` (1. Versuch) | Token-Cache loeschen, neuen Token holen, retry |
+| `401` (2.+ Versuch) | Sofort zurueckgeben (kein weiterer Retry) |
 | `4xx` (ausser 401, 429) | Sofort zurueckgeben (Client-Fehler, kein Retry) |
 | `429` (Rate Limit) | Retry mit Backoff |
 | `5xx` (Server-Fehler) | Retry mit Backoff |
@@ -380,7 +306,7 @@ Berechnung: `delay = BASE_DELAY * 2^attempt` = 500ms, 1000ms, 2000ms
 ```
 Request #1
   |-- Erfolg (2xx) --> Zurueckgeben
-  |-- 401 + JWT + attempt=0 --> Token refresh --> Request #2
+  |-- 401 + attempt=0 --> Token refresh --> Request #2
   |-- 4xx (nicht 429) --> Zurueckgeben (kein Retry)
   |-- 429 / 5xx --> Warte 500ms --> Request #2
   |-- Netzwerk-Fehler --> Warte 500ms --> Request #2
@@ -411,7 +337,7 @@ Wird der Timeout ausgeloest, zaehlt dies als Netzwerk-Fehler und triggert einen 
 
 ## Verfuegbare API-Methoden
 
-Der Client (`lmn-api-client.js`) exportiert folgende Methoden, die alle die `request()`-Funktion mit Auto-Detection und Retry-Logik verwenden:
+Der Client (`lmn-api-client.js`) exportiert folgende Methoden, die alle die `request()`-Funktion mit Retry-Logik verwenden:
 
 | Methode | HTTP | Pfad | Beschreibung |
 |---------|------|------|-------------|
@@ -422,6 +348,5 @@ Der Client (`lmn-api-client.js`) exportiert folgende Methoden, die alle die `req
 | `getDhcpExport(etag)` | `GET` | `/dhcp/export/dnsmasq-proxy` | DHCP-Export mit ETag-Support |
 | `checkHealth()` | `GET` | `/health` | Health-Check |
 
-Die vollstaendigen Pfade ergeben sich aus `{baseUrl}{pathPrefix}{path}`, z.B.:
-- JWT-Modus: `https://10.0.0.11:8001/v1/linbo/changes?since=abc123`
-- Legacy-Modus: `http://10.0.0.11:8400/api/v1/linbo/changes?since=abc123`
+Die vollstaendigen Pfade ergeben sich aus `{baseUrl}/v1/linbo{path}`, z.B.:
+- `https://10.0.0.11:8001/v1/linbo/changes?since=abc123`

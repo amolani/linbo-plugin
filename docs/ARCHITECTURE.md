@@ -12,7 +12,7 @@ graph TB
         SOPHO["Sophomorix<br/>User/Device Mgmt"]
         WEBUI["webui7<br/>Host/Config/Room CRUD"]
         LMNAPI["linuxmuster-api :8001<br/>Sophomorix REST (FastAPI)"]
-        AUTH["Authority API :8400<br/>Read-Only Delta-Feed (FastAPI)<br/><i>eigenentwickelt</i>"]
+        AUTH["linuxmuster-api :8001<br/>LINBO Router (Read-Only Delta-Feed)"]
         CSV[("devices.csv<br/>start.conf.*<br/>Source of Truth")]
 
         WEBUI -->|CRUD| CSV
@@ -74,7 +74,7 @@ graph TB
 
 ```mermaid
 sequenceDiagram
-    participant LMN as Authority API<br/>(10.0.0.11:8400)
+    participant LMN as linuxmuster-api<br/>(10.0.0.11:8001)
     participant API as Docker API<br/>(10.0.0.13:3000)
     participant Redis as Redis Cache
     participant FS as Dateisystem<br/>(/srv/linbo/)
@@ -141,7 +141,7 @@ graph TB
         SOPHO2["Sophomorix"]
         REACT_UI["React Frontend<br/><i>ersetzt webui7</i>"]
         LMNAPI2["linuxmuster-api :8001<br/>+ Patchclass-Endpoints<br/>+ Firmware-Endpoints"]
-        AUTH2["Authority API :8400<br/>+ Webhook-Dispatch<br/>+ Event-Stream"]
+        AUTH2["linuxmuster-api :8001<br/>+ Webhook-Dispatch<br/>+ Event-Stream"]
         CSV2[("devices.csv<br/>start.conf.*")]
 
         REACT_UI -->|REST| LMNAPI2
@@ -171,7 +171,7 @@ graph TB
     subgraph UPSTREAM["Upstream-PRs"]
         direction TB
         PR1["linuxmuster-linbo7<br/>├ devpts Fix<br/>├ udev Input Fix<br/>├ blkdev Symlinks<br/>└ Patchclass Framework"]
-        PR2["lmn-authority-api<br/>├ Webhook Dispatch<br/>└ Event-Stream (SSE)"]
+        PR2["linuxmuster-api<br/>├ Webhook Dispatch<br/>└ Event-Stream (SSE)"]
         PR3["linuxmuster-api<br/>├ Patchclass CRUD<br/>└ Firmware CRUD"]
     end
 
@@ -179,7 +179,7 @@ graph TB
     API2 -.->|Read-Only| AUTH2
 
     PR1 -.->|PR| LINBO7["linuxmuster-linbo7<br/>(GitHub)"]
-    PR2 -.->|PR| AUTHREPO["lmn-authority-api"]
+    PR2 -.->|PR| LMNAPIREPO2["linuxmuster-api"]
     PR3 -.->|PR| LMNAPIREPO["linuxmuster-api<br/>(GitHub)"]
 
     style REACT_UI fill:#16a34a,color:#fff
@@ -199,7 +199,7 @@ graph TB
 | `linuxmuster-linbo7` | udev Input | Bugfix | udevd restart vor linbo_gui |
 | `linuxmuster-linbo7` | blkdev Symlinks | Bugfix | `/dev/sd*` Symlinks für NVMe |
 | `linuxmuster-linbo7` | Patchclass | Feature | `linbo_patch_registry` Client-Script |
-| `lmn-authority-api` | Webhooks | Feature | Push-Notifications bei Änderungen |
+| `linuxmuster-api` | Webhooks | Feature | Push-Notifications bei Änderungen |
 | `linuxmuster-api` | Patchclass CRUD | Feature | Treiber-Verwaltung via REST |
 | `linuxmuster-api` | Firmware CRUD | Feature | Firmware-Verwaltung via REST |
 

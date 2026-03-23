@@ -1,7 +1,7 @@
 /**
  * Tests for Sync Service — hostsChanged "all" branch (CACHE-01)
  *
- * Verifies that when the LMN Authority API returns hostsChanged: ['all'],
+ * Verifies that when the LMN API returns hostsChanged: ['all'],
  * syncOnce() makes a second getChanges() call with ('', school) to fetch
  * the full host list — not just ('') without the school parameter.
  */

@@ -34,7 +34,7 @@ Eine traditionelle linuxmuster.net-Installation benoetigt eine spezifische Ubunt
 
 ### Read-Only-Prinzip
 
-**Docker schreibt NIEMALS Hosts, Configs oder Rooms zurueck zum LMN-Server.** Alle CRUD-Operationen (Hosts anlegen, Konfigurationen aendern, Raeume verwalten) geschehen ausschliesslich auf dem LMN-Server — ueber webui7 oder `linuxmuster-import-devices`. LINBO Docker konsumiert diese Daten ausschliesslich lesend ueber einen Cursor-basierten Delta-Feed der Authority API.
+**Docker schreibt NIEMALS Hosts, Configs oder Rooms zurueck zum LMN-Server.** Alle CRUD-Operationen (Hosts anlegen, Konfigurationen aendern, Raeume verwalten) geschehen ausschliesslich auf dem LMN-Server — ueber webui7 oder `linuxmuster-import-devices`. LINBO Docker konsumiert diese Daten ausschliesslich lesend ueber einen Cursor-basierten Delta-Feed der linuxmuster-api.
 
 Dieses Prinzip stellt sicher, dass der LMN-Server immer die einzige Source of Truth bleibt. Es gibt keinen Split-Brain, keine Synchronisationskonflikte und kein Risiko, dass Docker-seitige Aenderungen LMN-Daten korrumpieren.
 
@@ -173,7 +173,7 @@ graph LR
     end
 
     subgraph LMN["LMN-Server"]
-        AUTH["Authority API<br/>:8400 / :8001"]
+        AUTH["linuxmuster-api<br/>:8001"]
     end
 
     C1 & C2 & CN -->|"1. DHCP Discover<br/>UDP 67"| DHCP
@@ -182,7 +182,7 @@ graph LR
     C1 & C2 & CN -->|"4. rsync (Images+Configs)<br/>TCP 873"| RSYNC
     C1 & C2 & CN <-->|"5. SSH (Remote Cmds)<br/>TCP 2222"| SSH
 
-    API -->|"Sync Delta-Feed<br/>TCP 8400/8001"| AUTH
+    API -->|"Sync Delta-Feed<br/>TCP 8001"| AUTH
     API --> CACHE
     API --> SSH
     WEB -->|"Reverse Proxy<br/>/api/*"| API
@@ -218,7 +218,6 @@ Die folgenden Ports muessen auf dem Docker Host freigeschaltet sein.
 |------|-----------|----------|--------|-----------|
 | 443 | TCP | Docker -> Internet | HTTPS | `deb.linuxmuster.net` (Init-Container laedt linbo7-Pakete), GitHub (npm Packages fuer Web-Container Build). Nur beim Build/Update noetig. |
 | 8001 | TCP | Docker -> LMN | linuxmuster-api | Sync-Modus: `LMN_API_URL` zeigt auf diesen Port. Standard-Endpunkt. |
-| 8400 | TCP | Docker -> LMN | Authority API | Alternativer Sync-Endpunkt (eigenentwickelte API). Je nach Konfiguration `LMN_API_URL`. |
 
 > **Wichtig — SSH-Richtung:** Port 2222 wird bidirektional genutzt. Die API initiiert SSH-Verbindungen **zu** den LINBO-Clients (Remote-Befehle), und die Clients verbinden sich fuer rsync-Operationen zurueck. Der SSH-Container im Docker Host ist **kein** Ziel fuer Client-SSH — er dient als Relay.
 
@@ -331,7 +330,7 @@ In einem linuxmuster.net-Setup ist der LMN-Server die einzige Quelle fuer Host-,
 
 Wenn LINBO Docker diese Daten ebenfalls schreiben wuerde, entsteht ein **Split-Brain-Problem:** Zwei Systeme aendern dieselben Daten unabhaengig voneinander. Konflikte waeren unvermeidlich — insbesondere bei Netzwerkunterbrechungen zwischen Docker und LMN.
 
-Stattdessen konsumiert LINBO Docker die Daten ausschliesslich ueber einen **Cursor-basierten Delta-Feed** der Authority API. Bei jeder Synchronisation fragt Docker nur nach Aenderungen seit dem letzten bekannten Stand. Dies garantiert:
+Stattdessen konsumiert LINBO Docker die Daten ausschliesslich ueber einen **Cursor-basierten Delta-Feed** der linuxmuster-api. Bei jeder Synchronisation fragt Docker nur nach Aenderungen seit dem letzten bekannten Stand. Dies garantiert:
 
 - **Konsistenz:** Der LMN-Server bleibt immer Source of Truth
 - **Kein Datenverlust:** Kein Risiko, dass Docker LMN-Daten ueberschreibt

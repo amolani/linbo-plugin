@@ -441,14 +441,13 @@ curl -s -D- -H "X-API-Key: $TOKEN" \
 
 Die Datei `containers/api/src/lib/lmn-api-client.js` implementiert den HTTP-Client, der diese Endpoints aufruft. Wichtige Eigenschaften:
 
-### Auto-Detection des API-Modus
+### Authentifizierung
 
-Der Client erkennt automatisch anhand des Ports, welche API verwendet wird:
+Der Client authentifiziert sich per JWT gegen die linuxmuster-api (Port 8001):
 
-| Port | API | Auth-Methode | Pfad-Praefix |
-|------|-----|-------------|-------------|
-| `8001` | linuxmuster-api | JWT via HTTP Basic Auth + `X-API-Key` Header | `/v1/linbo` |
-| `8400` | Legacy Authority API | Statischer Bearer Token | `/api/v1/linbo` |
+| API | Auth-Methode | Pfad-Praefix |
+|-----|-------------|-------------|
+| linuxmuster-api (Port 8001) | JWT via HTTP Basic Auth + `X-API-Key` Header | `/v1/linbo` |
 
 ### Retry-Logik
 
@@ -465,9 +464,8 @@ Die Verbindungsdaten werden ueber den Settings-Service gelesen:
 | Setting | Beschreibung |
 |---------|-------------|
 | `lmn_api_url` | Basis-URL der API (z.B. `http://10.0.0.11:8001`) |
-| `lmn_api_user` | Benutzername fuer JWT-Auth (Port 8001) |
-| `lmn_api_password` | Passwort fuer JWT-Auth (Port 8001) |
-| `lmn_api_key` | Statischer API-Key (Port 8400, Legacy) |
+| `lmn_api_user` | Benutzername fuer JWT-Auth (linuxmuster-api) |
+| `lmn_api_password` | Passwort fuer JWT-Auth (linuxmuster-api) |
 
 ### Client-Funktionen
 

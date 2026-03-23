@@ -23,9 +23,8 @@
 - Header: `X-API-Key`
 - Kein Ablaufdatum (manuell rotierbar)
 
-### Authority API Auth
-- Bearer Token (statisch konfiguriert)
-- IP-Allowlist auf LMN-Server-Seite
+### LMN API Auth
+- JWT-Authentifizierung
 - Nur ausgehende Verbindungen (Docker -> LMN)
 
 ## SSH-Key-Management

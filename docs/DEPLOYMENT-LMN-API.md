@@ -339,23 +339,6 @@ docker exec linbo-cache redis-cli SET config:sync_enabled "true"
 **Hinweis:** Redis-Werte werden durch `.env`-Werte beim Container-Neustart
 ueberschrieben, wenn die entsprechende Umgebungsvariable gesetzt ist.
 
-### Methode 4: Legacy Authority API (Port 8400)
-
-Falls die separate Authority API (Python/FastAPI auf Port 8400) genutzt
-werden soll statt der offiziellen linuxmuster-api:
-
-```bash
-# In .env:
-SYNC_ENABLED=true
-LMN_API_URL=http://10.0.0.11:8400
-LMN_API_KEY=<statischer-bearer-token>
-# LMN_API_USER und LMN_API_PASSWORD bleiben leer
-```
-
-Der `lmn-api-client.js` erkennt den Modus automatisch anhand des Ports:
-- **Port 8001** → JWT-Auth via `/v1/auth/`, Pfad-Prefix `/v1/linbo/`
-- **Port 8400** → Statischer Bearer-Token, Pfad-Prefix `/api/v1/linbo/`
-
 ---
 
 ## Verifizierung
@@ -507,50 +490,20 @@ Oder im Frontend: Einstellungen → Sync → "Sync jetzt ausloesen".
 
 ---
 
-## Konventionen-Unterschiede
+## API-Konventionen
 
-Vergleich zwischen der Legacy Authority API (Port 8400) und der neuen
-linuxmuster-api Integration (Port 8001):
+Der LINBO-Router ist als Teil der linuxmuster-api (Port 8001) implementiert:
 
-| Aspekt | Authority API (Port 8400) | linuxmuster-api (Port 8001) |
-|--------|---------------------------|----------------------------|
-| **Typ** | Separate FastAPI-App | Router in bestehender API |
-| **Port** | 8400 | 8001 (HTTPS) |
-| **Pfad-Prefix** | `/api/v1/linbo/` | `/v1/linbo/` |
-| **Auth-Methode** | Statischer Bearer-Token | JWT via HTTP Basic Auth (`/v1/auth/`) |
-| **Auth-Header** | `Authorization: Bearer <token>` | `X-API-Key: <jwt>` |
-| **Berechtigungen** | IP-Allowlist + Token | LDAP-Rolle `globaladministrator` |
-| **Async** | `async def` (AsyncIO) | `def` (synchron, WSGI) |
-| **Delta-Cursor** | `timestamp:sequence` (SQLite) | Unix-Timestamp (file mtimes) |
-| **Caching** | In-Memory + SQLite | Kein (mtime bei jedem Request) |
-| **File Watcher** | inotify-basiert | Kein (performant fuer <1000 Hosts) |
-| **DHCP ETag** | MD5 des Inhalts | MD5 des Inhalts (identisch) |
-| **TLS** | Optional (HTTP moeglich) | Immer HTTPS (selbstsigniertes Zert.) |
-| **Installation** | Manuelle FastAPI-App | Teil des LMN-Pakets |
-| **Pydantic Models** | Eigene Schemas | Erweiterte body_schemas.py |
-| **Fehler-Codes** | Standard FastAPI (422, 404) | Standard FastAPI (422, 404) |
-| **Rate Limiting** | Kein | Kein |
-| **Logging** | Python logging | Python logging (linuxmuster-api) |
-
-### Auto-Erkennung im Docker-Client
-
-Der `lmn-api-client.js` (`containers/api/src/lib/lmn-api-client.js`) erkennt
-den Modus automatisch anhand des Ports in `LMN_API_URL`:
-
-```javascript
-function _detectMode(baseUrl) {
-  const url = new URL(baseUrl);
-  if (url.port === '8001') {
-    return { pathPrefix: '/v1/linbo', useJwt: true };
-  }
-  return { pathPrefix: '/api/v1/linbo', useJwt: false };
-}
-```
-
-- **Port 8001:** JWT-Login via `GET /v1/auth/` mit HTTP Basic Auth, Token wird
-  gecacht (1h, 5min Puffer). Auth-Header: `X-API-Key`.
-- **Andere Ports:** Statischer Bearer-Token aus `lmn_api_key` Setting.
-  Auth-Header: `Authorization: Bearer`.
+| Aspekt | Wert |
+|--------|------|
+| **Pfad-Prefix** | `/v1/linbo/` |
+| **Auth-Methode** | JWT via HTTP Basic Auth (`/v1/auth/`) |
+| **Auth-Header** | `X-API-Key: <jwt>` |
+| **Berechtigungen** | LDAP-Rolle `globaladministrator` |
+| **Delta-Cursor** | Unix-Timestamp (file mtimes) |
+| **TLS** | HTTPS (selbstsigniertes Zertifikat) |
+| **Pydantic Models** | Erweiterte body_schemas.py |
+| **Fehler-Codes** | Standard FastAPI (422, 404) |
 
 ---
 

@@ -11,7 +11,7 @@ Du bist ein erfahrener Security-Engineer fuer das LINBO Docker Projekt. Du veran
 - API-Key-Management fuer Service-to-Service-Kommunikation
 - Boot-Chain-Sicherheit (signierte Images, sichere Uebertragung)
 - Netzwerk-Sicherheit (Container-Isolation, Port-Exposure)
-- Authority API Authentifizierung (Bearer Token + IP Allowlist)
+- linuxmuster-api Authentifizierung (JWT)
 
 ## Security-Prinzipien
 
@@ -34,9 +34,8 @@ Du bist ein erfahrener Security-Engineer fuer das LINBO Docker Projekt. Du veran
 - In DB gespeichert (gehashed)
 - Header: `X-API-Key`
 
-### Authority API
-- Bearer Token fuer LMN-Server-Kommunikation
-- IP-Allowlist auf Server-Seite
+### linuxmuster-api
+- JWT-Authentifizierung fuer LMN-Server-Kommunikation
 - Cursor-basierte Delta-Feeds
 
 ## SSH-Key-Management

@@ -105,7 +105,7 @@ ops:{id}                  -> { type, status, hostId, output }
 ops:pending               -> List of operation IDs
 ops:running               -> List of operation IDs
 
-# Authority API Sync
+# LMN API Sync
 sync:cursor               -> Cursor-String fuer Delta-Feed
 sync:last                 -> Timestamp letzter Sync
 ```
@@ -114,7 +114,7 @@ sync:last                 -> Timestamp letzter Sync
 
 | Feature | Standalone (Prisma) | Sync (Redis-only) |
 |---|---|---|
-| Hosts | `prisma.host.findMany()` | Redis Cache von Authority API |
+| Hosts | `prisma.host.findMany()` | Redis Cache von linuxmuster-api |
 | Configs | `prisma.config.*` | Filesystem (`/srv/linbo/start.conf-*`) |
 | Operations | `prisma.operation.*` | `ops:*` Redis Keys |
 | Settings | `prisma.setting.*` | `config:*` Redis Keys |

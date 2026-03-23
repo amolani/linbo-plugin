@@ -31,7 +31,7 @@ LINBO Plugin ist eine containerisierte Version von [LINBO](https://github.com/li
 - **React Frontend** — Moderne Web-Oberfläche mit Dark Theme
 
 ### Integration
-- **Sync-Modus** — Read-Only Delta-Feed von linuxmuster.net Authority API
+- **Sync-Modus** — Read-Only Delta-Feed von linuxmuster-api
 - **REST API** -- Express.js mit JWT-Authentifizierung
 - **WebSocket** — Echtzeit-Updates für Host-Status, Operations, Sync-Fortschritt
 - **DHCP** — Export für ISC DHCP / dnsmasq, optionaler Proxy-DHCP-Container
@@ -60,8 +60,8 @@ Sync-Modus einrichten: Siehe [INSTALL.md -- Sync-Modus](docs/INSTALL.md#7-sync-m
 ```
                      LMN-Server (optional)
                     ┌──────────────────┐
-                    │ Authority API    │
-                    │ :8400            │
+                    │ linuxmuster-api  │
+                    │ :8001            │
                     │ (Delta-Feed)     │
                     └────────┬─────────┘
                              │ Read-Only
@@ -121,7 +121,7 @@ Sync-Modus einrichten: Siehe [INSTALL.md -- Sync-Modus](docs/INSTALL.md#7-sync-m
 | Terminal | SSH-Sessions mit xterm.js |
 | GRUB Theme | Logo, Icons, Farben |
 | Sync | Sync-Status, Cursor, API-Health |
-| Settings | Authority API, Passwort, Modus-Toggle |
+| Settings | LMN API, Passwort, Modus-Toggle |
 
 ## API-Endpoints
 

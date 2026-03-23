@@ -213,7 +213,7 @@ Name = Windows 11`;
     expect(client._store.get('sync:cursor')).toBe('1708943200:42');
   });
 
-  it('should sync GRUB configs from Authority API with school parameter', async () => {
+  it('should sync GRUB configs from LMN API with school parameter', async () => {
     await syncOnce();
     expect(lmnClient.getGrubConfigs).toHaveBeenCalledWith('default-school');
     expect(grubSync.writeGrubConfigs).toHaveBeenCalledTimes(1);

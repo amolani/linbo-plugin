@@ -2,7 +2,7 @@
 
 ## Ueberblick
 
-Der LINBO Docker Sync-Mechanismus synchronisiert Daten vom linuxmuster.net-Server (via Authority API oder linuxmuster-api) in den Docker-Container. Docker ist dabei **permanent read-only** -- es werden niemals Daten zurueck zum LMN-Server geschrieben.
+Der LINBO Docker Sync-Mechanismus synchronisiert Daten vom linuxmuster.net-Server (via linuxmuster-api) in den Docker-Container. Docker ist dabei **permanent read-only** -- es werden niemals Daten zurueck zum LMN-Server geschrieben.
 
 Der Sync wird manuell via `POST /api/v1/sync/trigger` ausgeloest. Bei jedem Sync-Zyklus werden folgende Daten geholt und lokal gespeichert:
 
@@ -38,7 +38,7 @@ const delta = await lmnClient.getChanges(cursor);
 
 Der gespeicherte Cursor wird aus Redis gelesen. Ist er leer (erster Sync oder nach Reset), wird ein **Full Snapshot** angefordert. Andernfalls werden nur die Aenderungen seit dem letzten Sync geholt.
 
-Die `getChanges()`-Funktion ruft `GET /changes?since={cursor}` auf der Authority API auf. Die Antwort enthaelt:
+Die `getChanges()`-Funktion ruft `GET /changes?since={cursor}` auf der linuxmuster-api auf. Die Antwort enthaelt:
 
 | Feld | Typ | Beschreibung |
 |------|-----|--------------|
@@ -243,7 +243,7 @@ Abschliessend werden WebSocket-Events gebroadcastet:
 
 ### Cursor-Konzept
 
-Der Cursor ist ein **Epoch-Timestamp** (Sekunden seit 1970-01-01), der den Zeitpunkt des letzten erfolgreichen Syncs markiert. Die Authority API auf dem LMN-Server nutzt die `mtime` (Aenderungszeit) der Dateien, um festzustellen, welche Dateien sich seit dem Cursor geaendert haben.
+Der Cursor ist ein **Epoch-Timestamp** (Sekunden seit 1970-01-01), der den Zeitpunkt des letzten erfolgreichen Syncs markiert. Die linuxmuster-api auf dem LMN-Server nutzt die `mtime` (Aenderungszeit) der Dateien, um festzustellen, welche Dateien sich seit dem Cursor geaendert haben.
 
 ### Full Snapshot vs Incremental
 
@@ -254,7 +254,7 @@ Der Cursor ist ein **Epoch-Timestamp** (Sekunden seit 1970-01-01), der den Zeitp
 
 ### mtime-basierte Erkennung auf dem Server
 
-Die Authority API (Python/FastAPI auf dem LMN-Server) ueberwacht:
+Die linuxmuster-api (Python/FastAPI auf dem LMN-Server) ueberwacht:
 - `/srv/linbo/start.conf.*` -- Start.conf-Dateien
 - `/etc/linuxmuster/sophomorix/default-school/devices.csv` -- Host-Daten
 - GRUB-Konfigurationsdateien
@@ -384,7 +384,7 @@ Nach der Host-Reconciliation werden alle verwaisten Symlinks bereinigt:
 Eine neue Gruppe hat eine Start.conf, aber noch keine GRUB-Config (keine Hosts zugewiesen). Step 4b erstellt einen minimalen Record mit `content: null` im Config-Index. Die Universe-List-Reconciliation merged `allConfigIds + allStartConfIds`, um diesen Record nicht sofort wieder zu loeschen.
 
 ### "all" in hostsChanged
-Die Authority API gibt `["all"]` statt einzelner MACs zurueck, wenn zu viele Hosts geaendert wurden. In diesem Fall holt der Sync eine vollstaendige Host-Liste ueber einen separaten `getChanges('')`-Aufruf (Full Snapshot nur fuer Hosts).
+Die linuxmuster-api gibt `["all"]` statt einzelner MACs zurueck, wenn zu viele Hosts geaendert wurden. In diesem Fall holt der Sync eine vollstaendige Host-Liste ueber einen separaten `getChanges('')`-Aufruf (Full Snapshot nur fuer Hosts).
 
 ### batchGetConfigs 404
 Wenn `batchGetConfigs` mit 404 fehlschlaegt (neue Gruppen ohne Hosts), wird der Fehler abgefangen und der Sync laeuft weiter. Andere HTTP-Fehler werden weiterhin geworfen.
@@ -411,7 +411,7 @@ Der HTTP-Client (`lmn-api-client.js`) hat eine eingebaute Retry-Logik:
 | Datei | Beschreibung |
 |-------|--------------|
 | `containers/api/src/services/sync.service.js` | Haupt-Sync-Logik |
-| `containers/api/src/lib/lmn-api-client.js` | HTTP-Client fuer Authority API |
+| `containers/api/src/lib/lmn-api-client.js` | HTTP-Client fuer linuxmuster-api |
 | `containers/api/src/lib/atomic-write.js` | Atomare Dateioperationen |
 | `containers/api/src/lib/startconf-rewrite.js` | `server=`-Feld Rewriting |
 | `containers/api/src/services/grub-generator.js` | GRUB-Config-Generierung |

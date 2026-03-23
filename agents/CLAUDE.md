@@ -8,7 +8,7 @@ Dieses Projekt ist eine standalone Docker-Implementierung des LINBO-Systems (Lin
 - Echtzeit-Monitoring via WebSocket (Host-Status, Operations)
 - Image-Management (QCOW2-Sync vom LMN-Server)
 - SSH-Terminal zu LINBO-Clients
-- Sync-Modus (read-only) mit linuxmuster.net 7.3 Authority API
+- Sync-Modus (read-only) mit linuxmuster-api
 - Patchclass-System für Treiber und Postsync-Skripte
 
 ## Rollen & Agenten

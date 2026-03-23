@@ -1,5 +1,5 @@
 /**
- * Tests for grub-sync module — writes GRUB configs from Authority API to disk
+ * Tests for grub-sync module — writes GRUB configs from LMN API to disk
  */
 const fsp = require('fs/promises');
 const path = require('path');

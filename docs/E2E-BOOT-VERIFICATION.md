@@ -33,7 +33,7 @@ Image sync + OS boot        -- downloads/restores OS images via rsync, then boot
 ```
 
 **Testserver:** 10.0.0.13
-**LMN Authority API:** 10.0.0.11:8001
+**LMN API (linuxmuster-api):** 10.0.0.11:8001
 **Verified:** 2026-03-17T13:48:09Z
 
 ## Pre-flight
@@ -128,7 +128,7 @@ curl -s http://localhost:3000/api/v1/sync/status \
 - `serverIp` = "10.0.0.13" (Docker VM IP, not LMN server)
 - `hosts` = 31 (hosts synced)
 - `configs` = 9 (group configs synced)
-- `lmnApiHealthy` = true (Authority API reachable)
+- `lmnApiHealthy` = true (LMN API reachable)
 
 ## 2. GRUB Configs
 
@@ -147,7 +147,7 @@ docker exec linbo-api ls -la /srv/linbo/boot/grub/*.cfg
 
 **Expected:** `grub.cfg` (PXE entry point) + at least one `{group}.cfg` per group with hosts.
 
-**Note:** Only groups that have the Authority API GRUB config export get `.cfg` files here.
+**Note:** Only groups that have the LMN API GRUB config export get `.cfg` files here.
 Groups with only start.conf but no GRUB config (e.g. nopxe) will not have a `.cfg` in boot/grub/.
 The hostcfg/ symlinks (section 4) handle the per-host fallback.
 
@@ -527,7 +527,7 @@ docker exec linbo-api ls -la "/srv/linbo/boot/grub/hostcfg/01-${MAC//:/-}.cfg"
 # Check if the target group .cfg exists
 docker exec linbo-api ls -la /srv/linbo/boot/grub/*.cfg
 
-# If group .cfg missing, the Authority API may not export GRUB config for that group
+# If group .cfg missing, the LMN API may not export GRUB config for that group
 # Check API logs:
 docker logs linbo-api 2>&1 | grep "GRUB"
 ```
@@ -602,4 +602,4 @@ desired outcome for these devices.
 | Sync cycle completes without error | PASS | lastError=null, 31 hosts, 9 configs |
 | Server= rewrite in start.conf files | PASS | All 9 groups show `Server = 10.0.0.13` |
 | DHCP config generated | PASS | dnsmasq-proxy.conf with 22 host entries |
-| LMN Authority API healthy | PASS | lmnApiHealthy=true |
+| LMN LMN API healthy | PASS | lmnApiHealthy=true |
