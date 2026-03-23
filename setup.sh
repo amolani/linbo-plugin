@@ -521,13 +521,14 @@ write_env() {
     timestamp=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 
     # Preserve existing secrets on re-run (avoids JWT invalidation)
-    local jwt_secret internal_key rsync_pw
+    local jwt_secret="" internal_key="" rsync_pw=""
+    # Preserve existing secrets on re-run (avoids JWT invalidation)
     if [[ -f "$env_file" ]]; then
         jwt_secret=$(grep '^JWT_SECRET=' "$env_file" 2>/dev/null | cut -d= -f2- | tr -d '"'"'"' ' || true)
         internal_key=$(grep '^INTERNAL_API_KEY=' "$env_file" 2>/dev/null | cut -d= -f2- | tr -d '"'"'"' ' || true)
         rsync_pw=$(grep '^RSYNC_PASSWORD=' "$env_file" 2>/dev/null | cut -d= -f2- | tr -d '"'"'"' ' || true)
     fi
-    # Generate only if not already set
+    # Generate only if not already set (fresh install or missing values)
     [[ -z "$jwt_secret" ]] && jwt_secret=$(generate_secret jwt)
     [[ -z "$internal_key" ]] && internal_key=$(generate_secret api_key)
     [[ -z "$rsync_pw" ]] && rsync_pw=$(generate_secret password)
