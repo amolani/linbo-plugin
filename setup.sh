@@ -903,6 +903,29 @@ rebuild_linbofs() {
     # Native update-linbofs produces the correct linbofs matching the
     # installed linbo7 package. Must run BEFORE tftpd-hpa starts so
     # clients always get a properly patched linbofs64.
+
+    # Ensure default start.conf exists (update-linbofs copies it into the initramfs).
+    # On a caching server there are only start.conf.GROUP files from sync — no plain start.conf.
+    if [[ ! -f /srv/linbo/start.conf && -n "${LINBO_SERVER_IP:-}" ]]; then
+        cat > /srv/linbo/start.conf << SCEOF
+[LINBO]
+Server = ${LINBO_SERVER_IP}
+Group = default
+Cache = /dev/sda4
+SystemType = efi64
+RootTimeout = 600
+AutostartTimeout = 15
+AutoFormat = no
+AutoPartition = no
+AutoInitCache = no
+DownloadType = torrent
+GuiDisabled = no
+UseMinimalLayout = no
+Locale = de-DE
+SCEOF
+        log_ok "Default start.conf created for update-linbofs"
+    fi
+
     if [[ -x /usr/sbin/update-linbofs ]]; then
         log_info "Rebuilding linbofs64 (this takes ~60s)..."
         if /usr/sbin/update-linbofs 2>&1 | tail -5; then
