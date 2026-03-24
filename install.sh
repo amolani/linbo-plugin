@@ -134,14 +134,36 @@ install_packages() {
         log_ok "nginx already installed"
     fi
 
+    # APT-Pin: block LMN packages that are NOT needed on a caching server
+    # These get pulled in as Recommends by linuxmuster-linbo7 and break
+    # because they need a full LMN setup (Samba AD, LDAP, etc.)
+    if [[ ! -f /etc/apt/preferences.d/linbo-caching-server ]]; then
+        cat > /etc/apt/preferences.d/linbo-caching-server << 'PINEOF'
+# Caching server: only linbo7 + common needed, block everything else
+Package: linuxmuster-base7
+Pin: release *
+Pin-Priority: -1
+
+Package: linuxmuster-tools7
+Pin: release *
+Pin-Priority: -1
+
+Package: linuxmuster-cli7
+Pin: release *
+Pin-Priority: -1
+
+Package: linuxmuster-webui7
+Pin: release *
+Pin-Priority: -1
+PINEOF
+        log_ok "APT pin: blocked unwanted LMN packages (base7, tools7, cli7, webui7)"
+    fi
+
     # linuxmuster-linbo7 — brings tftpd-hpa, rsync, grub, ssh, dropbear as dependencies
-    # NOTE: linuxmuster-common pulls linuxmuster-base7/tools7/webui7 which may fail
-    # on a caching server (missing LMN setup). linbo7 itself installs fine — we check
-    # for it explicitly and ignore errors from unrelated LMN packages.
     if ! is_installed linuxmuster-linbo7; then
         log_info "Installing linuxmuster-linbo7 (includes tftpd-hpa, rsync, grub, ssh)..."
-        DEBIAN_FRONTEND=noninteractive apt-get install -y -q linuxmuster-linbo7 2>&1 || true
-        # Repair any packages left in half-configured state (linuxmuster-base7 postinst may fail on caching servers)
+        DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends -q linuxmuster-linbo7 2>&1 || true
+        # Repair any packages left in half-configured state
         DEBIAN_FRONTEND=noninteractive dpkg --configure -a 2>/dev/null || true
         if is_installed linuxmuster-linbo7; then
             log_ok "linuxmuster-linbo7 installed"
@@ -152,6 +174,14 @@ install_packages() {
     else
         log_ok "linuxmuster-linbo7 already installed"
     fi
+
+    # Remove unwanted LMN packages if present (from previous installations)
+    for pkg in linuxmuster-base7 linuxmuster-tools7 linuxmuster-cli7 linuxmuster-webui7; do
+        if dpkg -l "$pkg" 2>/dev/null | grep -qE '^(ii|iU|iF)'; then
+            dpkg --force-remove-reinstreq --force-depends --purge "$pkg" 2>/dev/null || true
+            log_info "Removed unwanted package: $pkg"
+        fi
+    done
 
     # isc-dhcp-server — NOT a linbo7 dependency, must install separately
     # Disable immediately to prevent startup with empty dhcpd.conf
