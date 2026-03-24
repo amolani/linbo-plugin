@@ -1065,6 +1065,160 @@ print_summary() {
 }
 
 # =============================================================================
+# Post-Install Verification
+# =============================================================================
+verify_installation() {
+    echo ""
+    echo -e "${BOLD}Post-Install Verification${NC}"
+    echo ""
+    local FAIL=0
+
+    # --- Services ---
+    for svc in linbo-api nginx tftpd-hpa rsync isc-dhcp-server; do
+        if systemctl is-active --quiet "$svc" 2>/dev/null; then
+            log_ok "Service: $svc running"
+        else
+            log_fail "Service: $svc NOT running — fix: systemctl start $svc; journalctl -u $svc"
+            FAIL=$((FAIL + 1))
+        fi
+    done
+
+    # Optional services (don't fail, just warn)
+    for svc in opentracker linbo-torrent; do
+        if systemctl is-active --quiet "$svc" 2>/dev/null; then
+            log_ok "Service: $svc running"
+        else
+            log_warn "Service: $svc not running (optional)"
+        fi
+    done
+
+    # --- API Health ---
+    local health
+    health=$(curl -sf --max-time 5 http://127.0.0.1:3000/health 2>/dev/null)
+    if echo "$health" | grep -q '"healthy"'; then
+        log_ok "API health: healthy"
+    else
+        log_fail "API health: NOT responding — fix: journalctl -u linbo-api"
+        FAIL=$((FAIL + 1))
+    fi
+
+    # --- Boot files ---
+    for f in /srv/linbo/linbo64 /srv/linbo/linbofs64 /srv/linbo/boot/grub/x86_64-efi/core.efi /srv/linbo/boot/grub/i386-pc/core.0; do
+        if [[ -f "$f" ]]; then
+            log_ok "Boot: $(basename $f)"
+        else
+            log_fail "Boot: $(basename $f) MISSING — fix: update-linbofs or reinstall linuxmuster-linbo7"
+            FAIL=$((FAIL + 1))
+        fi
+    done
+
+    # --- linbofs64 has SSH keys ---
+    local tmpdir
+    tmpdir=$(mktemp -d)
+    (cd "$tmpdir" && xzcat /srv/linbo/linbofs64 2>/dev/null | cpio -id --quiet 2>/dev/null)
+    if [[ -f "$tmpdir/.ssh/authorized_keys" ]] && grep -q "ssh-rsa" "$tmpdir/.ssh/authorized_keys" 2>/dev/null; then
+        log_ok "linbofs64: SSH keys injected"
+    else
+        log_fail "linbofs64: SSH keys MISSING — fix: update-linbofs"
+        FAIL=$((FAIL + 1))
+    fi
+    rm -rf "$tmpdir"
+
+    # --- DHCP config ---
+    if [[ -f /etc/dhcp/dhcpd.conf ]] && grep -q "next-server" /etc/dhcp/dhcpd.conf 2>/dev/null; then
+        log_ok "DHCP: dhcpd.conf has PXE options"
+    else
+        log_fail "DHCP: dhcpd.conf missing or no PXE options — fix: setup-dhcp.sh --force"
+        FAIL=$((FAIL + 1))
+    fi
+
+    if grep -q 'INTERFACESv4="[a-z]' /etc/default/isc-dhcp-server 2>/dev/null; then
+        log_ok "DHCP: interface configured"
+    else
+        log_fail "DHCP: no interface set in /etc/default/isc-dhcp-server"
+        FAIL=$((FAIL + 1))
+    fi
+
+    # --- GRUB configs ---
+    local grub_count
+    grub_count=$(ls /srv/linbo/boot/grub/*.cfg 2>/dev/null | wc -l)
+    if [[ "$grub_count" -gt 0 ]]; then
+        log_ok "GRUB: $grub_count config(s)"
+    else
+        log_warn "GRUB: no configs yet (will appear after first sync)"
+    fi
+
+    # --- start.conf ---
+    local conf_count
+    conf_count=$(ls /srv/linbo/start.conf.* 2>/dev/null | grep -v md5 | grep -v bak | wc -l)
+    if [[ "$conf_count" -gt 0 ]]; then
+        log_ok "start.conf: $conf_count group(s)"
+    else
+        log_warn "start.conf: none yet (will appear after first sync)"
+    fi
+
+    # --- Frontend ---
+    if [[ -f /var/www/linbo/index.html ]]; then
+        log_ok "Frontend: deployed"
+    else
+        log_warn "Frontend: not deployed (API-only mode)"
+    fi
+
+    # --- nginx proxy ---
+    local nginx_health
+    nginx_health=$(curl -sf --max-time 5 http://127.0.0.1/health 2>/dev/null)
+    if echo "$nginx_health" | grep -q '"healthy"'; then
+        log_ok "nginx → API proxy: working"
+    else
+        log_fail "nginx → API proxy: NOT working — fix: check /etc/nginx/sites-enabled/linbo"
+        FAIL=$((FAIL + 1))
+    fi
+
+    # --- rsync accessible ---
+    if rsync --list-only --timeout=3 rsync://127.0.0.1/linbo/ >/dev/null 2>&1; then
+        log_ok "rsync: linbo module accessible"
+    else
+        log_fail "rsync: linbo module NOT accessible — fix: check /etc/rsyncd.conf"
+        FAIL=$((FAIL + 1))
+    fi
+
+    # --- Ports ---
+    for spec in "69:udp:TFTP" "873:tcp:rsync" "80:tcp:nginx" "3000:tcp:API"; do
+        IFS=: read -r port proto svc <<< "$spec"
+        local flag=$([[ "$proto" == "tcp" ]] && echo "-tlnp" || echo "-ulnp")
+        if ss "$flag" sport = :"$port" 2>/dev/null | grep -q ":${port}"; then
+            log_ok "Port $port/$proto ($svc) listening"
+        else
+            log_fail "Port $port/$proto ($svc) NOT listening"
+            FAIL=$((FAIL + 1))
+        fi
+    done
+
+    # --- .env ---
+    if [[ -f /etc/linbo-native/.env ]]; then
+        local perms
+        perms=$(stat -c '%a' /etc/linbo-native/.env)
+        if [[ "$perms" == "600" ]]; then
+            log_ok ".env: present (mode 600)"
+        else
+            log_warn ".env: insecure permissions ($perms instead of 600)"
+        fi
+    else
+        log_fail ".env: MISSING — this should not happen after setup"
+        FAIL=$((FAIL + 1))
+    fi
+
+    # --- Summary ---
+    echo ""
+    if [[ "$FAIL" -eq 0 ]]; then
+        echo -e "  ${GREEN}${BOLD}All checks passed — system is ready for PXE boot${NC}"
+    else
+        echo -e "  ${RED}${BOLD}$FAIL check(s) FAILED — see above for fixes${NC}"
+    fi
+    echo ""
+}
+
+# =============================================================================
 # main
 # =============================================================================
 main() {
@@ -1096,6 +1250,7 @@ main() {
     rebuild_linbofs
     enable_services
     initial_sync
+    verify_installation
     print_summary
 }
 
