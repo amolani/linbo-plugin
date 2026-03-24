@@ -1,0 +1,14 @@
+edulution-linbo-plugin (1.0.0) stable; urgency=medium
+
+  * Initial release of Edulution LINBO Plugin
+  * REST API with JWT auth, WebSocket, host management
+  * React frontend with dark theme
+  * Delta-Sync from linuxmuster-api (port 8001)
+  * DHCP scaffold with PXE boot options
+  * Image sync (HTTP range + torrent)
+  * SSH terminal (xterm.js)
+  * Driver management (patchclass)
+  * systemd hardening (ProtectSystem, MemoryMax)
+  * Production audit: 22 security + reliability fixes
+
+ -- Edulution <info@edulution.io>  Mon, 24 Mar 2026 12:00:00 +0100

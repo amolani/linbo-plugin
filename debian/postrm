@@ -1,0 +1,18 @@
+#!/bin/bash
+set -e
+
+case "$1" in
+    purge)
+        rm -f /etc/sudoers.d/linbo-services
+        rm -rf /var/lib/linbo-native /var/lib/linbo-api /var/log/linbo-native
+        rm -f /etc/linbo-native/.env
+        rm -f /lib/systemd/system/opentracker.service
+        systemctl daemon-reload 2>/dev/null || true
+        ;;
+    remove)
+        rm -f /etc/sudoers.d/linbo-services
+        ;;
+esac
+
+#DEBHELPER#
+exit 0

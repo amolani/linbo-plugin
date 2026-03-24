@@ -1,0 +1,7 @@
+srv/linbo-api
+srv/linbo-api/src
+var/www/linbo
+var/lib/linbo-native
+var/lib/linbo-api
+var/log/linbo-native
+etc/linbo-native

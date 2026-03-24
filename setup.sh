@@ -700,33 +700,42 @@ fix_etc_hosts() {
 # 13. Deploy API + systemd units
 # =============================================================================
 deploy_api() {
-    log_info "Deploying API to /srv/linbo-api..."
+    # If installed via .deb package, API code is already at /srv/linbo-api
+    # and systemd units are at /lib/systemd/system/. Only deploy from repo if
+    # running from a git checkout (SCRIPT_DIR contains src/).
+    if [[ -d "$SCRIPT_DIR/src" && -f "$SCRIPT_DIR/package.json" ]]; then
+        log_info "Deploying API from repo to /srv/linbo-api..."
+        rsync -a --delete \
+            --exclude=node_modules --exclude=.git --exclude=tests \
+            --exclude=frontend --exclude='*.md' --exclude='.planning' \
+            "$SCRIPT_DIR/" /srv/linbo-api/
 
-    rsync -a --delete \
-        --exclude=node_modules --exclude=.git --exclude=tests \
-        --exclude=frontend --exclude='*.md' --exclude='.planning' \
-        "$SCRIPT_DIR/" /srv/linbo-api/
+        cd /srv/linbo-api
+        if ! npm install --production --loglevel error 2>&1; then
+            log_warn "npm install failed — check network and retry: cd /srv/linbo-api && npm install --production"
+            return 1
+        fi
+        chown -R linbo:linbo /srv/linbo-api
+        log_ok "API deployed to /srv/linbo-api"
 
-    cd /srv/linbo-api
-    if ! npm install --production --loglevel error 2>&1; then
-        log_warn "npm install failed — check network and retry: cd /srv/linbo-api && npm install --production"
+        # systemd units (from repo)
+        cp "$SCRIPT_DIR/systemd/linbo-api.service" /etc/systemd/system/ 2>/dev/null || true
+        cp "$SCRIPT_DIR/systemd/linbo-setup.service" /etc/systemd/system/ 2>/dev/null || true
+        cp "$SCRIPT_DIR/scripts/setup-bootfiles.sh" /usr/local/bin/ 2>/dev/null || true
+        chmod +x /usr/local/bin/setup-bootfiles.sh 2>/dev/null || true
+    elif [[ -f /srv/linbo-api/package.json ]]; then
+        log_ok "API already deployed (installed via package)"
+    else
+        log_error "No API code found — install the package or run from the repo"
         return 1
     fi
-    chown -R linbo:linbo /srv/linbo-api
-    log_ok "API deployed to /srv/linbo-api"
 
-    # systemd units
-    cp "$SCRIPT_DIR/systemd/linbo-api.service" /etc/systemd/system/
-    cp "$SCRIPT_DIR/systemd/linbo-setup.service" /etc/systemd/system/
-    cp "$SCRIPT_DIR/scripts/setup-bootfiles.sh" /usr/local/bin/
-    chmod +x /usr/local/bin/setup-bootfiles.sh
     systemctl daemon-reload
     systemctl enable linbo-api linbo-setup 2>/dev/null
-    log_ok "systemd units installed and enabled"
+    log_ok "systemd units enabled"
 
-    # sudoers: allow linbo user to run LINBO management commands without password
+    # sudoers (idempotent — always write)
     cat > /etc/sudoers.d/linbo-services << 'SUDOEOF'
-# Allow linbo API service to manage LINBO services
 linbo ALL=(root) NOPASSWD: /usr/sbin/linbo-torrent
 linbo ALL=(root) NOPASSWD: /usr/sbin/linbo-multicast
 linbo ALL=(root) NOPASSWD: /usr/sbin/update-linbofs
@@ -736,12 +745,14 @@ linbo ALL=(root) NOPASSWD: /bin/systemctl reload rsync
 linbo ALL=(root) NOPASSWD: /bin/systemctl restart tftpd-hpa
 SUDOEOF
     chmod 440 /etc/sudoers.d/linbo-services
-    log_ok "sudoers configured for linbo service management"
+    log_ok "sudoers configured"
 
-    # Install monitoring (health check cron + morning report)
-    if [[ -x "$SCRIPT_DIR/scripts/monitoring/install-monitoring.sh" ]]; then
-        "$SCRIPT_DIR/scripts/monitoring/install-monitoring.sh" >/dev/null 2>&1
-        log_ok "Monitoring installed (health check every 5min, morning report 06:00)"
+    # Monitoring
+    local mon_script="/usr/share/linbo-api/scripts/monitoring/install-monitoring.sh"
+    [[ ! -x "$mon_script" ]] && mon_script="$SCRIPT_DIR/scripts/monitoring/install-monitoring.sh"
+    if [[ -x "$mon_script" ]]; then
+        "$mon_script" >/dev/null 2>&1
+        log_ok "Monitoring installed"
     fi
 }
 
@@ -751,10 +762,15 @@ SUDOEOF
 deploy_frontend() {
     log_info "Deploying frontend..."
 
+    # If frontend already deployed (e.g. from .deb package), skip build
+    if [[ -f /var/www/linbo/index.html ]]; then
+        log_ok "Frontend already deployed"
+    fi
+
     local dist_dir="$SCRIPT_DIR/frontend/dist"
 
-    # Build frontend if dist/ not present
-    if [[ ! -f "$dist_dir/index.html" && -d "$SCRIPT_DIR/frontend" ]]; then
+    # Build frontend only if not deployed AND repo has source
+    if [[ ! -f /var/www/linbo/index.html && -d "$SCRIPT_DIR/frontend" && ! -f "$dist_dir/index.html" ]]; then
         # GITHUB_TOKEN needed for @edulution-io/ui-kit (private npm package)
         if [[ -z "${GITHUB_TOKEN:-}" ]]; then
             if [[ "$INTERACTIVE" == "true" ]]; then
@@ -790,14 +806,16 @@ deploy_frontend() {
         fi
     fi
 
-    # Deploy built frontend
-    if [[ -d "$dist_dir" && -f "$dist_dir/index.html" ]]; then
-        mkdir -p /var/www/linbo
-        cp -r "$dist_dir"/* /var/www/linbo/
-        log_ok "Frontend deployed to /var/www/linbo"
-    else
-        mkdir -p /var/www/linbo
-        log_warn "No frontend — API-only mode (UI at http://localhost:3000/docs)"
+    # Deploy built frontend (skip if already present from .deb)
+    if [[ ! -f /var/www/linbo/index.html ]]; then
+        if [[ -d "$dist_dir" && -f "$dist_dir/index.html" ]]; then
+            mkdir -p /var/www/linbo
+            cp -r "$dist_dir"/* /var/www/linbo/
+            log_ok "Frontend deployed to /var/www/linbo"
+        else
+            mkdir -p /var/www/linbo
+            log_warn "No frontend — API-only mode (UI at http://localhost:3000/docs)"
+        fi
     fi
 
     # nginx site config (always regenerate to pick up fixes)
@@ -891,9 +909,15 @@ rebuild_linbofs() {
 # 16. DHCP scaffold (dhcpd.conf with PXE boot options)
 # =============================================================================
 setup_dhcp() {
-    if [[ -x "$SCRIPT_DIR/scripts/server/setup-dhcp.sh" ]]; then
+    local dhcp_script=""
+    # Find setup-dhcp.sh: package location or repo location
+    for candidate in /usr/local/bin/setup-dhcp.sh "$SCRIPT_DIR/scripts/server/setup-dhcp.sh"; do
+        [[ -x "$candidate" ]] && dhcp_script="$candidate" && break
+    done
+
+    if [[ -n "$dhcp_script" ]]; then
         log_info "Setting up DHCP..."
-        "$SCRIPT_DIR/scripts/server/setup-dhcp.sh" --force
+        "$dhcp_script" --force
     else
         log_warn "setup-dhcp.sh not found — DHCP not configured"
     fi

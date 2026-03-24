@@ -1,0 +1,16 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: edulution-linbo-plugin
+Upstream-Contact: info@edulution.io
+Source: https://github.com/amolani/linbo-plugin
+
+Files: *
+Copyright: 2026 Edulution
+License: AGPL-3.0
+
+License: AGPL-3.0
+ This program is free software: you can redistribute it and/or modify
+ it under the terms of the GNU Affero General Public License as
+ published by the Free Software Foundation, version 3.
+ .
+ The full text of the license can be found at
+ https://www.gnu.org/licenses/agpl-3.0.html

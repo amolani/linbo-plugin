@@ -1,0 +1,15 @@
+Source: edulution-linbo-plugin
+Section: admin
+Priority: optional
+Maintainer: Edulution <info@edulution.io>
+Homepage: https://github.com/amolani/linbo-plugin
+
+Package: edulution-linbo-plugin
+Architecture: all
+Depends: linuxmuster-linbo7 (>= 4.3.0), nodejs (>= 18), nginx, isc-dhcp-server, openssl, jq, curl
+Description: Edulution LINBO Plugin - Native Caching Server
+ Web-based management interface and caching satellite for linuxmuster-linbo7.
+ Provides REST API, React frontend, Delta-Sync from LMN server,
+ DHCP/PXE configuration, image management, and SSH terminal.
+ .
+ After installation, run 'sudo linbo-setup' to configure.

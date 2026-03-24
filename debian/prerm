@@ -1,0 +1,12 @@
+#!/bin/bash
+set -e
+
+case "$1" in
+    remove|upgrade)
+        systemctl stop linbo-api 2>/dev/null || true
+        systemctl disable linbo-api linbo-setup 2>/dev/null || true
+        ;;
+esac
+
+#DEBHELPER#
+exit 0

@@ -1,0 +1,78 @@
+#!/bin/bash
+set -e
+
+case "$1" in
+    configure)
+        # 1. Create linbo system user
+        if ! id linbo &>/dev/null; then
+            useradd --system --no-create-home --shell /usr/sbin/nologin \
+                --comment "LINBO API service account" --home-dir /srv/linbo-api linbo
+        fi
+
+        # 2. Create directories + set permissions
+        mkdir -p /etc/linbo-native /var/lib/linbo-native /var/lib/linbo-api /var/log/linbo-native /var/www/linbo
+        chown -R linbo:linbo /srv/linbo-api
+        chown linbo:linbo /var/lib/linbo-native /var/lib/linbo-api /var/log/linbo-native
+        chmod 700 /etc/linbo-native
+
+        # 3. Install Node.js production dependencies
+        if [ -f /srv/linbo-api/package.json ]; then
+            echo "Installing Node.js dependencies..."
+            cd /srv/linbo-api && npm ci --production --loglevel error 2>&1 || true
+            chown -R linbo:linbo /srv/linbo-api
+        fi
+
+        # 4. SSH key setup (copy root key for linbo user access)
+        if [ -f /root/.ssh/id_rsa ] && [ -d /etc/linuxmuster/linbo ]; then
+            cp /root/.ssh/id_rsa /etc/linuxmuster/linbo/ssh_host_rsa_key_client
+            chown root:linbo /etc/linuxmuster/linbo/ssh_host_rsa_key_client
+            chmod 640 /etc/linuxmuster/linbo/ssh_host_rsa_key_client
+        fi
+
+        # 5. sudoers for linbo service management
+        cat > /etc/sudoers.d/linbo-services << 'SUDOEOF'
+linbo ALL=(root) NOPASSWD: /usr/sbin/linbo-torrent
+linbo ALL=(root) NOPASSWD: /usr/sbin/linbo-multicast
+linbo ALL=(root) NOPASSWD: /usr/sbin/update-linbofs
+linbo ALL=(root) NOPASSWD: /bin/systemctl restart isc-dhcp-server
+linbo ALL=(root) NOPASSWD: /bin/systemctl reload rsync
+linbo ALL=(root) NOPASSWD: /bin/systemctl restart tftpd-hpa
+linbo ALL=(root) NOPASSWD: /usr/sbin/dhcpd -t -cf /etc/dhcp/dhcpd.conf
+SUDOEOF
+        chmod 440 /etc/sudoers.d/linbo-services
+
+        # 6. systemd
+        systemctl daemon-reload
+        systemctl enable linbo-api linbo-setup 2>/dev/null || true
+
+        # 7. opentracker service unit (if opentracker installed)
+        if command -v opentracker &>/dev/null && [ ! -f /lib/systemd/system/opentracker.service ]; then
+            cat > /lib/systemd/system/opentracker.service << 'OTEOF'
+[Unit]
+Description=OpenTracker service
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/sbin/opentracker -u nobody -d /srv/linbo
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
+OTEOF
+            systemctl daemon-reload
+            systemctl enable opentracker 2>/dev/null || true
+        fi
+
+        echo ""
+        echo "============================================"
+        echo "  edulution-linbo-plugin installed."
+        echo ""
+        echo "  Next step: sudo linbo-setup"
+        echo "============================================"
+        echo ""
+        ;;
+esac
+
+#DEBHELPER#
+exit 0
