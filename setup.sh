@@ -869,7 +869,26 @@ NGINXEOF
 }
 
 # =============================================================================
-# 15. DHCP scaffold (dhcpd.conf with PXE boot options)
+# 15. Rebuild linbofs64 (SSH keys, kernel modules, locale)
+# =============================================================================
+rebuild_linbofs() {
+    # Native update-linbofs produces the correct linbofs matching the
+    # installed linbo7 package. Must run BEFORE tftpd-hpa starts so
+    # clients always get a properly patched linbofs64.
+    if [[ -x /usr/sbin/update-linbofs ]]; then
+        log_info "Rebuilding linbofs64 (this takes ~60s)..."
+        if /usr/sbin/update-linbofs 2>&1 | tail -5; then
+            log_ok "linbofs64 rebuilt (native update-linbofs)"
+        else
+            log_warn "update-linbofs failed — PXE clients may not boot correctly"
+        fi
+    else
+        log_warn "update-linbofs not found — linbofs64 may lack SSH keys"
+    fi
+}
+
+# =============================================================================
+# 16. DHCP scaffold (dhcpd.conf with PXE boot options)
 # =============================================================================
 setup_dhcp() {
     if [[ -x "$SCRIPT_DIR/scripts/server/setup-dhcp.sh" ]]; then
@@ -923,18 +942,6 @@ initial_sync() {
         log_ok "Initial sync completed"
     else
         log_warn "Initial sync may have failed — check: curl http://localhost:3000/api/v1/sync/status"
-    fi
-
-    # Rebuild linbofs64 (inject SSH keys + secrets)
-    log_info "Rebuilding linbofs64 (injecting SSH keys)..."
-    local rebuild_result
-    rebuild_result=$(curl -sf -X POST http://127.0.0.1:3000/api/v1/system/update-linbofs \
-        -H "Authorization: Bearer $token" --max-time 300 2>/dev/null)
-
-    if echo "$rebuild_result" | grep -q '"success"'; then
-        log_ok "linbofs64 rebuilt with SSH keys"
-    else
-        log_warn "linbofs64 rebuild may have failed — check: journalctl -u linbo-api"
     fi
 
     # Enable and start DHCP with fresh config from sync
@@ -1041,6 +1048,7 @@ main() {
     deploy_api
     deploy_frontend
     setup_dhcp
+    rebuild_linbofs
     enable_services
     initial_sync
     print_summary
