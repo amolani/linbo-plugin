@@ -18,6 +18,10 @@ const { KEY, loadAllHostsFromRedis, loadAllConfigsFromRedis } = syncService;
 
 const LINBO_DIR = process.env.LINBO_DIR || '/srv/linbo';
 
+// Input validation patterns for path/key safety
+const SAFE_ID_RE = /^[a-zA-Z0-9._-]+$/;
+const SAFE_MAC_RE = /^[0-9a-fA-F]{2}(:[0-9a-fA-F]{2}){5}$/;
+
 // Auth middleware
 const auth = require('../middleware/auth');
 const authenticate = auth.authenticateToken;
@@ -313,14 +317,19 @@ router.get('/hosts', authenticate, async (req, res, next) => {
  */
 router.get('/hosts/:mac', authenticate, async (req, res, next) => {
   try {
+    const mac = req.params.mac;
+    if (!SAFE_MAC_RE.test(mac) || mac.includes('..')) {
+      return res.status(400).json({ error: { code: 'VALIDATION_ERROR', message: 'Invalid MAC address' } });
+    }
+
     const client = redis.getClient();
-    const hostJson = await client.get(`${KEY.HOST}${req.params.mac}`);
+    const hostJson = await client.get(`${KEY.HOST}${mac}`);
 
     if (!hostJson) {
       return res.status(404).json({
         error: {
           code: 'HOST_NOT_FOUND',
-          message: `Host with MAC ${req.params.mac} not found in sync cache`,
+          message: `Host with MAC ${mac} not found in sync cache`,
         },
       });
     }
@@ -449,14 +458,19 @@ router.get('/configs', authenticate, async (req, res, next) => {
  */
 router.get('/configs/:id', authenticate, async (req, res, next) => {
   try {
+    const id = req.params.id;
+    if (!SAFE_ID_RE.test(id) || id.includes('..')) {
+      return res.status(400).json({ error: { code: 'VALIDATION_ERROR', message: 'Invalid config ID' } });
+    }
+
     const client = redis.getClient();
-    const configJson = await client.get(`${KEY.CONFIG}${req.params.id}`);
+    const configJson = await client.get(`${KEY.CONFIG}${id}`);
 
     if (!configJson) {
       return res.status(404).json({
         error: {
           code: 'CONFIG_NOT_FOUND',
-          message: `Config '${req.params.id}' not found in sync cache`,
+          message: `Config '${id}' not found in sync cache`,
         },
       });
     }
@@ -515,7 +529,12 @@ router.get('/configs/:id', authenticate, async (req, res, next) => {
  */
 router.get('/configs/:id/preview', authenticate, async (req, res, next) => {
   try {
-    const filePath = path.join(LINBO_DIR, `start.conf.${req.params.id}`);
+    const id = req.params.id;
+    if (!SAFE_ID_RE.test(id) || id.includes('..')) {
+      return res.status(400).json({ error: { code: 'VALIDATION_ERROR', message: 'Invalid config ID' } });
+    }
+
+    const filePath = path.join(LINBO_DIR, `start.conf.${id}`);
 
     let content;
     try {
@@ -525,7 +544,7 @@ router.get('/configs/:id/preview', authenticate, async (req, res, next) => {
         return res.status(404).json({
           error: {
             code: 'FILE_NOT_FOUND',
-            message: `start.conf.${req.params.id} not found on filesystem`,
+            message: `start.conf.${id} not found on filesystem`,
           },
         });
       }

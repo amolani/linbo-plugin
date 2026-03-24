@@ -14,6 +14,9 @@ const { execFile, spawn } = require('child_process');
 const BATCH_INTERVAL_MS = 100;
 const JOURNALCTL_PATH = '/usr/bin/journalctl';
 
+// Allowlist of service names that may be streamed/queried via journalctl
+const ALLOWED_SERVICES = /^(linbo-api|linbo-setup|nginx|tftpd-hpa|rsync|isc-dhcp-server|ssh)$/;
+
 // Active streams: serviceName -> { proc, clients: Set<ws>, batchTimer, pendingBatch }
 const activeStreams = new Map();
 
@@ -105,6 +108,10 @@ async function getRecentLogs(serviceName, tail = 200) {
   if (!isAvailable()) return [];
 
   const unit = toUnitName(serviceName);
+  const baseName = unit.replace('.service', '');
+  if (!ALLOWED_SERVICES.test(baseName)) {
+    return []; // reject unknown services
+  }
   return new Promise((resolve) => {
     execFile(JOURNALCTL_PATH, [
       '-u', unit,
@@ -131,6 +138,10 @@ async function subscribe(serviceName, ws) {
   if (!isAvailable()) return;
 
   const unit = toUnitName(serviceName);
+  const baseName = unit.replace('.service', '');
+  if (!ALLOWED_SERVICES.test(baseName)) {
+    return; // silently ignore unknown services
+  }
 
   // If already streaming this service, just add client
   if (activeStreams.has(serviceName)) {

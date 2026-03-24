@@ -67,7 +67,7 @@ const VALIDATORS = {
   lmn_api_password: () => true,
   linbo_server_ip: (v) => /^(\d{1,3}\.){3}\d{1,3}$/.test(v) && v.split('.').every(o => +o <= 255),
   lmn_school: (v) => /^[a-zA-Z0-9][a-zA-Z0-9_-]*$/.test(v),
-  admin_password: (v) => v.length >= 4,
+  admin_password: (v) => v.length >= 8,
   sync_interval: (v) => /^\d+$/.test(String(v)) && Number(v) >= 0,
 };
 

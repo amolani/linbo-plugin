@@ -359,6 +359,7 @@ async function syncOnce() {
             console.log('[Sync] isc-dhcp-server restarted successfully');
           } catch (restartErr) {
             console.error('[Sync] DHCP restart failed:', restartErr.stderr || restartErr.message);
+            stats.dhcpRestartFailed = true;
           }
         }
 

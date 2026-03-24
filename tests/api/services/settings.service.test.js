@@ -344,9 +344,9 @@ describe('VALIDATORS', () => {
     expect(VALIDATORS.sync_interval('abc')).toBe(false);
   });
 
-  test('admin_password requires min 4 chars', () => {
-    expect(VALIDATORS.admin_password('abcd')).toBe(true);
-    expect(VALIDATORS.admin_password('abc')).toBe(false);
+  test('admin_password requires min 8 chars', () => {
+    expect(VALIDATORS.admin_password('testpass')).toBe(true);
+    expect(VALIDATORS.admin_password('abcdefg')).toBe(false);
   });
 });
 

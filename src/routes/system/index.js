@@ -131,6 +131,14 @@ router.get('/containers/:name/logs', authenticateToken, asyncHandler(async (req,
   if (!containerLogs.isAvailable()) {
     return res.status(503).json({ error: 'Journald not available' });
   }
+
+  // Allowlist: only permitted service names may be queried
+  const ALLOWED_SERVICES = /^(linbo-api|linbo-setup|nginx|tftpd-hpa|rsync|isc-dhcp-server|ssh)$/;
+  const name = req.params.name.replace(/\.service$/, '');
+  if (!ALLOWED_SERVICES.test(name)) {
+    return res.status(400).json({ error: 'Unknown or disallowed service name' });
+  }
+
   const tail = Math.min(parseInt(req.query.tail) || 200, 2000);
   const entries = await containerLogs.getRecentLogs(req.params.name, tail);
   res.json({ entries, container: req.params.name });

@@ -11,7 +11,6 @@
 
 const express = require('express');
 const router = express.Router();
-const fs = require('fs');
 const fsp = require('fs/promises');
 const { execFile } = require('child_process');
 const { promisify } = require('util');
@@ -74,7 +73,7 @@ async function runAllChecks() {
 
     // Disk space
     runCheck('disk-srv-linbo', true, async () => {
-      const stats = fs.statfsSync(LINBO_DIR);
+      const stats = await fsp.statfs(LINBO_DIR);
       const freeGB = Math.round((stats.bfree * stats.bsize) / (1024 * 1024 * 1024) * 10) / 10;
       if (freeGB < 5) throw new Error(`${freeGB}GB free (<5GB)`);
       return `${freeGB}GB free`;

@@ -82,12 +82,12 @@ describe('VALIDATORS', () => {
   });
 
   describe('admin_password', () => {
-    it('accepts 4+ characters', () => {
-      expect(VALIDATORS.admin_password('test')).toBe(true);
+    it('accepts 8+ characters', () => {
+      expect(VALIDATORS.admin_password('testpass')).toBe(true);
     });
 
-    it('rejects 3 characters', () => {
-      expect(VALIDATORS.admin_password('abc')).toBe(false);
+    it('rejects 7 characters', () => {
+      expect(VALIDATORS.admin_password('abcdefg')).toBe(false);
     });
   });
 

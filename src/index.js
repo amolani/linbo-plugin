@@ -182,10 +182,10 @@ app.get('/health', async (req, res) => {
   }
 
   // Check LINBO filesystem
-  const fs = require('fs');
+  const fsp = require('fs/promises');
   const LINBO_DIR = process.env.LINBO_DIR || '/srv/linbo';
   try {
-    fs.accessSync(LINBO_DIR, fs.constants.R_OK);
+    await fsp.access(LINBO_DIR);
     health.services.linbo = 'up';
   } catch {
     health.services.linbo = 'down';
@@ -194,19 +194,16 @@ app.get('/health', async (req, res) => {
 
   // Disk space on LINBO directory
   try {
-    const { statfsSync } = fs;
-    if (statfsSync) {
-      const diskStats = statfsSync(LINBO_DIR);
-      const freeGB = (diskStats.bfree * diskStats.bsize) / (1024 * 1024 * 1024);
-      health.disk = { freeGB: Math.round(freeGB * 10) / 10, path: LINBO_DIR };
-      if (freeGB < 1) { health.status = 'degraded'; health.disk.warning = 'low disk space'; }
-    }
-  } catch { /* statfsSync not available */ }
+    const diskStats = await fsp.statfs(LINBO_DIR);
+    const freeGB = (diskStats.bfree * diskStats.bsize) / (1024 * 1024 * 1024);
+    health.disk = { freeGB: Math.round(freeGB * 10) / 10, path: LINBO_DIR };
+    if (freeGB < 1) { health.status = 'degraded'; health.disk.warning = 'low disk space'; }
+  } catch { /* statfs not available */ }
 
   // Store snapshot age
   try {
     const storePath = process.env.STORE_SNAPSHOT || '/var/lib/linbo-native/store.json';
-    const stat = fs.statSync(storePath);
+    const stat = await fsp.stat(storePath);
     const ageSec = Math.round((Date.now() - stat.mtimeMs) / 1000);
     health.store = { snapshotAgeSec: ageSec, path: storePath };
   } catch { health.store = { snapshotAgeSec: null, path: null }; }
@@ -501,6 +498,12 @@ async function startServer() {
             const { hostIp, cols, rows } = msg;
             if (!hostIp) {
               ws.send(JSON.stringify({ type: 'terminal.error', error: 'hostIp required' }));
+              return;
+            }
+            // Validate IPv4 to prevent SSRF via SSH
+            const _ipv4Re = /^(\d{1,3}\.){3}\d{1,3}$/;
+            if (!_ipv4Re.test(hostIp) || !hostIp.split('.').every(o => +o >= 0 && +o <= 255)) {
+              ws.send(JSON.stringify({ type: 'terminal.error', error: 'hostIp must be a valid IPv4 address' }));
               return;
             }
             const sessionId = await terminalService.createSession(hostIp, user.id || user.username, {

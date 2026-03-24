@@ -66,14 +66,18 @@ async function safeUnlink(filepath) {
 }
 
 /**
- * Create a symlink, removing any existing file/symlink at the path first.
+ * Create a symlink atomically: create at a temp path, then rename over the target.
+ * This avoids a window where the symlink doesn't exist (ENOENT during PXE boot).
+ * rename() is atomic on Linux for same-filesystem operations.
  * @param {string} target - Symlink target (relative or absolute)
  * @param {string} linkPath - Symlink file path
  */
 async function forceSymlink(target, linkPath) {
   await fsp.mkdir(path.dirname(linkPath), { recursive: true });
-  await safeUnlink(linkPath);
-  await fsp.symlink(target, linkPath);
+  const tmp = `${linkPath}.tmp.${process.pid}`;
+  try { await fsp.unlink(tmp); } catch (e) { if (e.code !== 'ENOENT') throw e; }
+  await fsp.symlink(target, tmp);
+  await fsp.rename(tmp, linkPath);
 }
 
 module.exports = {

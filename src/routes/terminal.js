@@ -9,6 +9,12 @@ const { authenticateToken } = require('../middleware/auth');
 const terminalService = require('../services/terminal.service');
 const sshService = require('../services/ssh.service');
 
+// IPv4 validation to prevent SSRF via SSH
+const SAFE_IPV4_RE = /^(\d{1,3}\.){3}\d{1,3}$/;
+function isValidIpv4(ip) {
+  return SAFE_IPV4_RE.test(ip) && ip.split('.').every(o => +o >= 0 && +o <= 255);
+}
+
 // All terminal endpoints require authentication
 router.use(authenticateToken);
 
@@ -93,6 +99,11 @@ router.post('/test-connection', async (req, res) => {
   if (!hostIp) {
     return res.status(400).json({
       error: { code: 'VALIDATION_ERROR', message: 'hostIp is required' },
+    });
+  }
+  if (!isValidIpv4(hostIp)) {
+    return res.status(400).json({
+      error: { code: 'VALIDATION_ERROR', message: 'hostIp must be a valid IPv4 address' },
     });
   }
 
