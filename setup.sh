@@ -952,8 +952,15 @@ initial_sync() {
 # =============================================================================
 enable_services() {
     log_info "Starting services..."
+
+    # Core boot services (from linuxmuster-linbo7 package)
+    systemctl enable --now tftpd-hpa 2>/dev/null && log_ok "tftpd-hpa running" || log_warn "tftpd-hpa start failed"
+    systemctl enable --now rsync 2>/dev/null && log_ok "rsync running" || log_warn "rsync start failed"
+
+    # Web
     systemctl enable --now nginx 2>/dev/null && log_ok "nginx running" || log_warn "nginx start failed"
 
+    # LINBO API
     systemctl start linbo-setup 2>/dev/null || true
     systemctl start linbo-api 2>/dev/null
 
