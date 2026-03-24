@@ -12,6 +12,7 @@ const TEST_LINBO_DIR = '/srv/linbo';
 const TEST_IMAGES_DIR = '/srv/linbo/images';
 process.env.LINBO_DIR = TEST_LINBO_DIR;
 process.env.IMAGES_DIR = TEST_IMAGES_DIR;
+if (!process.env.INTERNAL_API_KEY) process.env.INTERNAL_API_KEY = 'test-internal-key';
 
 // Mock websocket
 jest.mock('../../../src/lib/websocket', () => ({

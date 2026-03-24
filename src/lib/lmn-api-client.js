@@ -2,6 +2,19 @@
  * LINBO Plugin - LMN API Client
  * HTTP client for fetching LINBO data from linuxmuster-api (port 8001)
  * with JWT auth via /v1/auth, paths under /v1/linbo/.
+ *
+ * SECURITY NOTE — NODE_TLS_REJECT_UNAUTHORIZED=0
+ * -----------------------------------------------
+ * The LMN API (linuxmuster-api on port 8001) uses a self-signed TLS
+ * certificate. Node.js 20 native `fetch()` does not support per-request
+ * TLS options (no `agent` parameter, unlike node-fetch or undici).
+ * Therefore the process-global `NODE_TLS_REJECT_UNAUTHORIZED=0` env var
+ * is set in the .env file when SYNC_ENABLED=true. This disables TLS
+ * certificate verification for ALL outgoing HTTPS connections in this
+ * process — acceptable here because the only HTTPS target is the LMN
+ * server on the local network. If a future Node.js version exposes
+ * per-request TLS config for native fetch, this should be scoped to
+ * LMN API calls only.
  */
 
 const REQUEST_TIMEOUT = 10_000;

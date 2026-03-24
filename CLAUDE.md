@@ -5,6 +5,26 @@
 **Immer die sauberste, modernste Lösung wählen — auch wenn sie mehr Arbeit bedeutet.**
 Niemals "schnell-schnell"-Lösungen. Lieber einmal richtig als zweimal nachbessern.
 
+## Shared Knowledge Base — Obsidian Vault (`/root/obsidian-linbo/`)
+
+Der Vault ist eine **lebendige Wissensdatenbank** — kein statisches Archiv.
+Einstieg: `00-MOC/Home.md`
+
+### Pflicht: Wissen aktiv pflegen
+Während der Arbeit **kontinuierlich** neue Erkenntnisse eintragen:
+- **Bug gefunden?** → Lösung in `05-Wissen/` dokumentieren, `[[Backlinks]]` zu betroffenen Projekten/Servern setzen
+- **Architektur-Entscheidung getroffen?** → ADR in `04-Entscheidungen/` anlegen
+- **Neues über einen Server gelernt?** → Server-Seite in `03-Server/` aktualisieren
+- **Projekt-Feature gebaut?** → Projekt-Seite in `01-Projekte/` ergänzen
+- **Konzept vertieft?** → Architektur-Seite in `02-Architektur/` erweitern oder neue anlegen
+
+### Regeln
+- Jede neue Seite bekommt YAML-Frontmatter (`created`, `updated`, `tags`)
+- Immer `[[Backlinks]]` setzen zu verwandten Seiten
+- Tags hierarchisch: `#projekt/linb-amo`, `#server/10-40-0-10`, `#architektur`
+- Veraltete Infos in bestehenden Seiten aktualisieren, nicht stehen lassen
+- Am Session-Ende: Eintrag in `07-Sessions/` mit Zusammenfassung
+
 ## CRITICAL: Session Start
 
 ### 1. Agents laden

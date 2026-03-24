@@ -12,10 +12,10 @@ const zlib = require('zlib');
 const { Readable } = require('stream');
 const { pipeline } = require('stream/promises');
 const { Transform } = require('stream');
-const { exec } = require('child_process');
+const { execFile } = require('child_process');
 const { promisify } = require('util');
 
-const execAsync = promisify(exec);
+const execFileAsync = promisify(execFile);
 const { getClient } = require('../lib/redis');
 const ws = require('../lib/websocket');
 const linbofsService = require('./linbofs.service');
@@ -180,7 +180,7 @@ function parseDebianStanza(stanza) {
 
 async function isNewer(available, installed) {
   try {
-    await execAsync(`dpkg --compare-versions "${available}" gt "${installed}"`);
+    await execFileAsync('dpkg', ['--compare-versions', available, 'gt', installed]);
     return true;
   } catch {
     return false;
@@ -315,8 +315,8 @@ let workDir = null;
 async function preflightCheck(expectedSize) {
   for (const dir of [os.tmpdir(), LINBO_DIR]) {
     try {
-      const { stdout } = await execAsync(`df -B1 --output=avail "${dir}" | tail -1`);
-      const avail = parseInt(stdout.trim(), 10);
+      const { stdout } = await execFileAsync('df', ['-B1', '--output=avail', dir]);
+      const avail = parseInt(stdout.trim().split('\n').pop(), 10);
       const required = expectedSize * 3;
       if (avail < required) {
         throw new Error(
@@ -389,7 +389,7 @@ async function extractDeb(debPath) {
 
   const extractDir = path.join(workDir, 'extracted');
   await fs.mkdir(extractDir, { recursive: true });
-  await execAsync(`dpkg-deb -x "${debPath}" "${extractDir}"`);
+  await execFileAsync('dpkg-deb', ['-x', debPath, extractDir]);
   return extractDir;
 }
 

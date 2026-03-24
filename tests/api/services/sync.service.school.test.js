@@ -20,8 +20,17 @@ jest.mock('../../../src/lib/redis', () => {
   const sets = new Map();
   const mockClient = {
     get: jest.fn(async (key) => store.get(key) || null),
-    set: jest.fn(async (key, val) => { store.set(key, val); }),
+    set: jest.fn(async (key, val, ...rest) => {
+      // Handle SET key value NX EX ttl (atomic lock pattern)
+      if (rest[0] === 'NX') {
+        if (store.has(key)) return null;   // NX: fail if key exists
+        store.set(key, val);
+        return 'OK';
+      }
+      store.set(key, val);
+    }),
     del: jest.fn(async (key) => { store.delete(key); }),
+    expire: jest.fn(async () => 1),
     mget: jest.fn(async (...keys) => {
       const flat = keys.flat();
       return flat.map(k => store.get(k) || null);

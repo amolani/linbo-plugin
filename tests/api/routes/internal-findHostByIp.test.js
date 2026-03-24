@@ -5,6 +5,9 @@
  * (sync:host:ip:{ip} then sync:host:{mac}) instead of O(n) smembers + loop.
  */
 
+// Set env before importing modules (internal.js requires INTERNAL_API_KEY)
+if (!process.env.INTERNAL_API_KEY) process.env.INTERNAL_API_KEY = 'test-internal-key';
+
 // Mock websocket
 jest.mock('../../../src/lib/websocket', () => ({
   broadcast: jest.fn(),

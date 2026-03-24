@@ -299,7 +299,7 @@ function validateSecrets() {
 // Server Startup
 // =============================================================================
 const PORT = process.env.PORT || 3000;
-const HOST = process.env.HOST || '0.0.0.0';
+const HOST = process.env.HOST || '127.0.0.1';
 
 async function startServer() {
   log.info('Starting LINBO Plugin API Server (sync-only mode)...');
@@ -325,10 +325,12 @@ async function startServer() {
   // Validate secrets before proceeding
   validateSecrets();
 
-  // Store initialized synchronously (no Redis connection needed)
-  console.log('Store initialized (in-memory, no Redis)');
+  // Wait for store snapshot to be fully loaded before mounting routes
+  const store = require('./lib/store');
+  await store.ready;
+  console.log('Store initialized (in-memory, snapshot loaded)');
 
-  // Mount API routes (after Redis is ready)
+  // Mount API routes (after store is ready)
   console.log('Mounting API routes...');
   const apiRoutes = await createRouter();
   app.use('/api/v1', apiRoutes);
@@ -812,7 +814,6 @@ async function startServer() {
 
   // Periodic store snapshot (every 5 minutes) — protects against data loss on crash
   const STORE_SAVE_INTERVAL = parseInt(process.env.STORE_SAVE_INTERVAL, 10) || 60 * 1000; // 1 min default
-  const store = require('./lib/store');
   server._storeAutoSave = setInterval(async () => {
     try {
       await store.flushToDisk();

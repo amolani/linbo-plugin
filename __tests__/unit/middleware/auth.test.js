@@ -372,6 +372,10 @@ describe('auth — module exports', () => {
 
   it('exports JWT_EXPIRES_IN with a default value', () => {
     expect(typeof JWT_EXPIRES_IN).toBe('string');
-    expect(JWT_EXPIRES_IN).toBe('24h');
+    // The module uses process.env.JWT_EXPIRES_IN || '24h' at load time.
+    // When the env var is set (e.g. by another test project's globalSetup),
+    // the exported value reflects that; otherwise it defaults to '24h'.
+    const expected = process.env.JWT_EXPIRES_IN || '24h';
+    expect(JWT_EXPIRES_IN).toBe(expected);
   });
 });

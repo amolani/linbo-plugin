@@ -109,13 +109,11 @@ const KEY = {
 async function syncOnce() {
   const client = redis.getClient();
 
-  // Guard: only one sync at a time
-  const running = await client.get(KEY.IS_RUNNING);
-  if (running === 'true') {
+  // Guard: only one sync at a time (atomic NX — prevents race between get+set)
+  const acquired = await client.set(KEY.IS_RUNNING, 'true', 'NX', 'EX', 60);
+  if (!acquired) {
     throw new Error('Sync already in progress');
   }
-
-  await client.set(KEY.IS_RUNNING, 'true', 'EX', 60); // 60s TTL — auto-recovery if sync crashes
   const startTime = Date.now();
 
   // Heartbeat: refresh lock TTL every 20s while sync is running
@@ -416,7 +414,7 @@ async function syncOnce() {
     throw err;
   } finally {
     clearInterval(heartbeat);
-    await client.set(KEY.IS_RUNNING, 'false');
+    await client.del(KEY.IS_RUNNING);
   }
 }
 

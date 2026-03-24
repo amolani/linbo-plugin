@@ -972,10 +972,11 @@ function reset() {
 }
 
 // ---------------------------------------------------------------------------
-// Module-level startup: load snapshot (fire-and-forget)
+// Module-level startup: load snapshot and expose a ready promise
 // ---------------------------------------------------------------------------
 
-loadFromDisk().catch((err) => {
+/** Resolves once the on-disk snapshot has been loaded (or failed gracefully). */
+const ready = loadFromDisk().catch((err) => {
   console.warn('[Store] startup snapshot load failed:', err.message);
 });
 
@@ -1040,4 +1041,4 @@ function gc() {
   return evicted;
 }
 
-module.exports = { client, reset, flushToDisk, loadFromDisk, gc };
+module.exports = { client, reset, flushToDisk, loadFromDisk, gc, ready };

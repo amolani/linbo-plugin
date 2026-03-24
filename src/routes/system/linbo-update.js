@@ -9,6 +9,9 @@ const { authenticateToken, requireRole } = require('../../middleware/auth');
 const { auditAction } = require('../../middleware/audit');
 const linboUpdateService = require('../../services/linbo-update.service');
 
+/** Wrap async route handlers so rejected promises forward to Express error handler. */
+const asyncHandler = fn => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
+
 /**
  * @openapi
  * /system/linbo-version:
@@ -149,10 +152,10 @@ router.post(
   '/linbo-update/cancel',
   authenticateToken,
   requireRole(['admin']),
-  async (req, res) => {
+  asyncHandler(async (req, res) => {
     linboUpdateService.cancelUpdate();
     res.json({ data: { cancelled: true } });
-  }
+  })
 );
 
 module.exports = router;

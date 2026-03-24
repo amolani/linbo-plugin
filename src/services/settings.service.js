@@ -220,10 +220,12 @@ async function checkAdminPassword(input) {
     return bcrypt.compare(input, hash);
   }
 
-  // Fallback: env var (plaintext comparison)
+  // Fallback: env var — hash it on first use, store in Redis
   const envPass = process.env.ADMIN_PASSWORD;
   if (envPass) {
-    return input === envPass;
+    const envHash = await bcrypt.hash(envPass, 10);
+    await client.set('config:admin_password_hash', envHash);
+    return bcrypt.compare(input, envHash);
   }
 
   return false;

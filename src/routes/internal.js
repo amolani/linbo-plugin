@@ -404,9 +404,14 @@ router.post('/client-status', authenticateInternal, async (req, res, next) => {
  * Reads the file directly from /srv/linbo/ filesystem.
  * Sync service creates: start.conf.{group}, start.conf-{ip}, start.conf-{mac}
  */
-router.get('/config/:identifier', async (req, res, next) => {
+const SAFE_IDENTIFIER_RE = /^[A-Za-z0-9.:_-]+$/;
+
+router.get('/config/:identifier', authenticateInternal, async (req, res, next) => {
   try {
     const { identifier } = req.params;
+    if (!SAFE_IDENTIFIER_RE.test(identifier) || identifier.includes('..')) {
+      return res.status(400).json({ error: 'Invalid identifier' });
+    }
     const fs = require('fs').promises;
     const path = require('path');
     const { LINBO_DIR } = require('../lib/image-path');

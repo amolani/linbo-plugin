@@ -100,7 +100,7 @@ install_packages() {
     # --- Prerequisites for repo setup ---
     log_info "Ensuring base tools..."
     DEBIAN_FRONTEND=noninteractive apt-get install -y -q \
-        curl gnupg ca-certificates wget >/dev/null 2>&1
+        curl gnupg ca-certificates wget >/dev/null
     log_ok "Base tools (curl, gnupg, ca-certificates, wget)"
 
     # --- Add APT repositories ---
@@ -119,7 +119,7 @@ install_packages() {
     # Node.js (brings npm)
     if ! is_installed nodejs; then
         log_info "Installing nodejs..."
-        DEBIAN_FRONTEND=noninteractive apt-get install -y -q nodejs >/dev/null 2>&1
+        DEBIAN_FRONTEND=noninteractive apt-get install -y -q nodejs >/dev/null
         log_ok "nodejs $(node --version) installed"
     else
         log_ok "nodejs already installed ($(node --version))"
@@ -128,7 +128,7 @@ install_packages() {
     # nginx
     if ! is_installed nginx; then
         log_info "Installing nginx..."
-        DEBIAN_FRONTEND=noninteractive apt-get install -y -q nginx >/dev/null 2>&1
+        DEBIAN_FRONTEND=noninteractive apt-get install -y -q nginx >/dev/null
         log_ok "nginx installed"
     else
         log_ok "nginx already installed"
@@ -141,6 +141,8 @@ install_packages() {
     if ! is_installed linuxmuster-linbo7; then
         log_info "Installing linuxmuster-linbo7 (includes tftpd-hpa, rsync, grub, ssh)..."
         DEBIAN_FRONTEND=noninteractive apt-get install -y -q linuxmuster-linbo7 2>&1 || true
+        # Repair any packages left in half-configured state (linuxmuster-base7 postinst may fail on caching servers)
+        DEBIAN_FRONTEND=noninteractive dpkg --configure -a 2>/dev/null || true
         if is_installed linuxmuster-linbo7; then
             log_ok "linuxmuster-linbo7 installed"
         else
@@ -155,7 +157,7 @@ install_packages() {
     # Disable immediately to prevent startup with empty dhcpd.conf
     if ! is_installed isc-dhcp-server; then
         log_info "Installing isc-dhcp-server..."
-        DEBIAN_FRONTEND=noninteractive apt-get install -y -q isc-dhcp-server >/dev/null 2>&1
+        DEBIAN_FRONTEND=noninteractive apt-get install -y -q isc-dhcp-server >/dev/null
         systemctl disable isc-dhcp-server 2>/dev/null || true
         systemctl stop isc-dhcp-server 2>/dev/null || true
         log_ok "isc-dhcp-server installed (disabled — setup-dhcp.sh configures and enables it)"
@@ -167,7 +169,7 @@ install_packages() {
     # openssl
     if ! is_installed openssl; then
         log_info "Installing openssl..."
-        DEBIAN_FRONTEND=noninteractive apt-get install -y -q openssl >/dev/null 2>&1
+        DEBIAN_FRONTEND=noninteractive apt-get install -y -q openssl >/dev/null
         log_ok "openssl installed"
     else
         log_ok "openssl already installed"
@@ -176,7 +178,7 @@ install_packages() {
     # jq
     if ! is_installed jq; then
         log_info "Installing jq..."
-        DEBIAN_FRONTEND=noninteractive apt-get install -y -q jq >/dev/null 2>&1
+        DEBIAN_FRONTEND=noninteractive apt-get install -y -q jq >/dev/null
         log_ok "jq installed"
     else
         log_ok "jq already installed"
@@ -212,9 +214,11 @@ clean_docker_firewall_residue() {
         iptables -t nat -D PREROUTING -m addrtype --dst-type LOCAL -j DOCKER 2>/dev/null || true
         iptables -t nat -D OUTPUT -m addrtype --dst-type LOCAL -j DOCKER 2>/dev/null || true
 
-        # Flush nftables Docker tables (if nft is available)
+        # Delete Docker-created nftables tables only (never flush the entire ruleset)
         if command -v nft &>/dev/null; then
-            nft flush ruleset 2>/dev/null || true
+            for table in $(nft list tables 2>/dev/null | grep -i docker | awk '{print $3}'); do
+                nft delete table ip "$table" 2>/dev/null || true
+            done
         fi
 
         # Ensure FORWARD policy is ACCEPT (Docker sets it to DROP)

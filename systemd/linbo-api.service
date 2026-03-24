@@ -21,5 +21,14 @@ StandardOutput=journal
 StandardError=journal
 SyslogIdentifier=linbo-api
 
+# Security hardening
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+NoNewPrivileges=yes
+ReadWritePaths=/srv/linbo /srv/linbo-api /var/lib/linbo-native /var/lib/linbo-api /etc/linuxmuster /etc/dhcp /var/run /var/log/linbo-native
+MemoryMax=1G
+LimitNOFILE=65536
+
 [Install]
 WantedBy=multi-user.target

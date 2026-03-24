@@ -38,6 +38,13 @@ function createLoginLimiter(options = {}) {
 const loginLimiter = createLoginLimiter();
 
 /**
+ * Separate rate limiter for token refresh endpoint.
+ * Uses the same parameters as loginLimiter but tracks its own counter
+ * so refresh attempts don't consume the login budget and vice-versa.
+ */
+const refreshLimiter = createLoginLimiter();
+
+/**
  * General write-operation rate limiter.
  * Limits POST/PUT/DELETE requests to 30 per minute per IP.
  * Protects against abuse of resource-intensive operations
@@ -56,4 +63,4 @@ const writeLimiter = rateLimit({
   },
 });
 
-module.exports = { loginLimiter, createLoginLimiter, writeLimiter };
+module.exports = { loginLimiter, refreshLimiter, createLoginLimiter, writeLimiter };

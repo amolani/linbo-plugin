@@ -27,6 +27,7 @@ function createApp() {
   // Disable rate limiting for tests (avoid 429 from rapid test requests)
   jest.mock('../../../src/middleware/rate-limit', () => ({
     loginLimiter: (req, res, next) => next(),
+    refreshLimiter: (req, res, next) => next(),
     createLoginLimiter: () => (req, res, next) => next(),
     writeLimiter: (req, res, next) => next(),
   }));

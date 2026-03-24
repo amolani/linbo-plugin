@@ -16,7 +16,10 @@ const {
 } = require('../middleware/auth');
 const jwt = require('jsonwebtoken');
 const { validateBody, loginSchema } = require('../middleware/validate');
-const { loginLimiter } = require('../middleware/rate-limit');
+const { loginLimiter, refreshLimiter } = require('../middleware/rate-limit');
+
+/** Wrap async route handlers so rejected promises forward to Express error handler. */
+const asyncHandler = fn => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
 
 // Audit middleware: optional
 let auditAction;
@@ -109,7 +112,7 @@ router.post(
  *       200: { description: New JWT token }
  *       401: { description: Token too old or invalid }
  */
-router.post('/refresh', async (req, res, next) => {
+router.post('/refresh', refreshLimiter, async (req, res, next) => {
   try {
     const authHeader = req.headers.authorization;
     const token = authHeader && authHeader.split(' ')[1];
@@ -175,14 +178,14 @@ router.post(
   '/logout',
   authenticateToken,
   auditAction('auth.logout'),
-  async (req, res) => {
+  asyncHandler(async (req, res) => {
     // In a stateless JWT setup, logout is handled client-side
     res.json({
       data: {
         message: 'Logged out successfully',
       },
     });
-  }
+  })
 );
 
 /**

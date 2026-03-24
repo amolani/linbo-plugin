@@ -17,8 +17,17 @@ jest.mock('../../../src/lib/redis', () => {
   const sets = new Map();
   const mockClient = {
     get: jest.fn(async (key) => store.get(key) || null),
-    set: jest.fn(async (key, val) => { store.set(key, val); }),
+    set: jest.fn(async (key, val, ...rest) => {
+      // Handle SET key value NX EX ttl (atomic lock pattern)
+      if (rest[0] === 'NX') {
+        if (store.has(key)) return null;   // NX: fail if key exists
+        store.set(key, val);
+        return 'OK';
+      }
+      store.set(key, val);
+    }),
     del: jest.fn(async (key) => { store.delete(key); }),
+    expire: jest.fn(async () => 1),
     mget: jest.fn(async (...keys) => {
       const flat = keys.flat();
       return flat.map(k => store.get(k) || null);
@@ -347,8 +356,8 @@ describe('syncOnce — error handling', () => {
     expect(client._store.get('sync:cursor')).toBe('100:1');
     // Error should be recorded
     expect(client._store.get('sync:lastError')).toBe('API down');
-    // Running flag should be cleared
-    expect(client._store.get('sync:isRunning')).toBe('false');
+    // Running flag should be cleared (del removes the key)
+    expect(client._store.has('sync:isRunning')).toBe(false);
   });
 
   it('should prevent concurrent syncs', async () => {

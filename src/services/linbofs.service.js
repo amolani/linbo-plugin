@@ -3,11 +3,12 @@
  * Manages linbofs64 updates and key injection
  */
 
-const { exec, spawn } = require('child_process');
+const { exec, execFile, spawn } = require('child_process');
 const util = require('util');
 const fs = require('fs').promises;
 const path = require('path');
 const execAsync = util.promisify(exec);
+const execFileAsync = util.promisify(execFile);
 const redis = require('../lib/redis');
 
 const UPDATE_SCRIPT = process.env.UPDATE_LINBOFS_SCRIPT || '/usr/sbin/update-linbofs';
@@ -19,7 +20,7 @@ let _fakerootAvailable = null;
 async function isFakerootAvailable() {
   if (_fakerootAvailable === null) {
     try {
-      await execAsync('command -v fakeroot');
+      await execFileAsync('which', ['fakeroot']);
       _fakerootAvailable = true;
     } catch {
       _fakerootAvailable = false;
@@ -102,8 +103,7 @@ async function updateLinbofs(options = {}) {
     }
 
     // update-linbofs requires root — use sudo (configured in /etc/sudoers.d/linbo-services)
-    const cmd = `sudo ${UPDATE_SCRIPT}`;
-    const { stdout, stderr } = await execAsync(cmd, {
+    const { stdout, stderr } = await execFileAsync('sudo', [UPDATE_SCRIPT], {
       env,
       timeout: 300000, // 5 minute timeout
       maxBuffer: 10 * 1024 * 1024, // 10MB buffer
@@ -201,7 +201,9 @@ async function verifyLinbofs() {
     // Check if linbofs64 exists
     await fs.access(linbofs);
 
-    // List contents and check for required files
+    // List contents and check for required files.
+    // NOTE: execAsync (shell) is required here because of the pipe between xz and cpio.
+    // The `linbofs` path comes solely from the LINBO_DIR env var, never from user input.
     const { stdout } = await execAsync(
       `xz -dc "${linbofs}" | cpio -t 2>/dev/null || true`
     );
@@ -324,8 +326,8 @@ async function generateSshKeyPair(type = 'ed25519') {
   try {
     await fs.mkdir(CONFIG_DIR, { recursive: true });
 
-    const { stdout, stderr } = await execAsync(
-      `ssh-keygen -t ${type} -f "${keyPath}" -N "" -q`
+    const { stdout, stderr } = await execFileAsync(
+      'ssh-keygen', ['-t', type, '-f', keyPath, '-N', '', '-q']
     );
 
     return {
@@ -359,8 +361,8 @@ async function generateDropbearKey(type = 'ed25519') {
     // Map type names for dropbearkey
     const dropbearType = type === 'ed25519' ? 'ed25519' : type === 'ecdsa' ? 'ecdsa' : 'rsa';
 
-    const { stdout, stderr } = await execAsync(
-      `dropbearkey -t ${dropbearType} -f "${keyPath}"`
+    const { stdout, stderr } = await execFileAsync(
+      'dropbearkey', ['-t', dropbearType, '-f', keyPath]
     );
 
     return {

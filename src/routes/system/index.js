@@ -5,6 +5,10 @@
 
 const express = require('express');
 const router = express.Router();
+const { authenticateToken } = require('../../middleware/auth');
+
+/** Wrap async route handlers so rejected promises forward to Express error handler. */
+const asyncHandler = fn => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
 
 router.use('/', require('./linbofs'));
 router.use('/', require('./kernel'));
@@ -47,7 +51,7 @@ router.use('/', require('./monitoring'));
  *                   items:
  *                     type: object
  */
-router.get('/logs', (req, res) => {
+router.get('/logs', authenticateToken, (req, res) => {
   const logStream = require('../../lib/logStream');
   const limit = Math.min(parseInt(req.query.limit) || 200, 2000);
   res.json({ entries: logStream.getRecentLogs(limit) });
@@ -76,14 +80,14 @@ router.get('/logs', (req, res) => {
  *                 available:
  *                   type: boolean
  */
-router.get('/containers', async (req, res) => {
+router.get('/containers', authenticateToken, asyncHandler(async (req, res) => {
   const containerLogs = require('../../lib/containerLogs');
   if (!containerLogs.isAvailable()) {
     return res.json({ containers: [], available: false });
   }
   const containers = await containerLogs.listContainers();
   res.json({ containers, available: true });
-});
+}));
 
 /**
  * @openapi
@@ -122,7 +126,7 @@ router.get('/containers', async (req, res) => {
  *       503:
  *         description: Journald not available
  */
-router.get('/containers/:name/logs', async (req, res) => {
+router.get('/containers/:name/logs', authenticateToken, asyncHandler(async (req, res) => {
   const containerLogs = require('../../lib/containerLogs');
   if (!containerLogs.isAvailable()) {
     return res.status(503).json({ error: 'Journald not available' });
@@ -130,6 +134,6 @@ router.get('/containers/:name/logs', async (req, res) => {
   const tail = Math.min(parseInt(req.query.tail) || 200, 2000);
   const entries = await containerLogs.getRecentLogs(req.params.name, tail);
   res.json({ entries, container: req.params.name });
-});
+}));
 
 module.exports = router;

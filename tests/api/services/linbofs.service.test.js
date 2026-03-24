@@ -20,16 +20,27 @@ jest.mock('child_process', () => ({
     if (typeof opts === 'function') {
       callback = opts;
     }
-    // Simulate script execution
-    if (cmd.includes('nonexistent')) {
-      callback(new Error('Script not found'));
-    } else if (cmd.includes('fail')) {
-      callback(null, '', 'Update failed');
-    } else if (cmd.includes('xz -dc')) {
+    // exec is only used for piped commands (xz | cpio)
+    if (cmd.includes('xz -dc')) {
       callback(null, '.ssh/authorized_keys\netc/dropbear\netc/ssh/ssh_host_rsa_key\netc/linbo_pwhash', '');
-    } else if (cmd.includes('ssh-keygen')) {
+    } else {
+      callback(null, 'Command executed successfully', '');
+    }
+  }),
+  execFile: jest.fn((cmd, args, opts, callback) => {
+    if (typeof opts === 'function') {
+      callback = opts;
+      opts = {};
+    }
+    // Route by command binary
+    if (cmd === 'which') {
+      callback(null, '/usr/bin/fakeroot', '');
+    } else if (cmd === 'sudo') {
+      // sudo runs update-linbofs
+      callback(null, 'Command executed successfully', '');
+    } else if (cmd === 'ssh-keygen') {
       callback(null, 'Key generated', '');
-    } else if (cmd.includes('dropbearkey')) {
+    } else if (cmd === 'dropbearkey') {
       callback(null, 'Dropbear key generated', '');
     } else {
       callback(null, 'Command executed successfully', '');
