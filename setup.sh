@@ -742,24 +742,63 @@ deploy_frontend() {
     log_info "Deploying frontend..."
 
     local dist_dir="$SCRIPT_DIR/frontend/dist"
+
+    # Build frontend if dist/ not present
+    if [[ ! -f "$dist_dir/index.html" && -d "$SCRIPT_DIR/frontend" ]]; then
+        # GITHUB_TOKEN needed for @edulution-io/ui-kit (private npm package)
+        if [[ -z "${GITHUB_TOKEN:-}" ]]; then
+            if [[ "$INTERACTIVE" == "true" ]]; then
+                echo ""
+                echo -e "${BOLD}Frontend Build${NC}"
+                echo "  The UI requires a GitHub token for private npm packages."
+                echo "  Create at: https://github.com/settings/tokens (scope: read:packages)"
+                echo ""
+                read -sp "GitHub Token (or Enter to skip frontend): " GITHUB_TOKEN
+                echo ""
+                export GITHUB_TOKEN
+            fi
+        fi
+
+        if [[ -n "${GITHUB_TOKEN:-}" ]]; then
+            log_info "Building frontend (this may take a minute)..."
+            (
+                cd "$SCRIPT_DIR/frontend"
+                if npm ci --loglevel error 2>&1 && npm run build 2>&1; then
+                    true  # success
+                else
+                    false  # failure
+                fi
+            )
+            if [[ $? -eq 0 ]]; then
+                log_ok "Frontend built"
+            else
+                log_warn "Frontend build failed — UI won't be available"
+                log_warn "Manually: cd $SCRIPT_DIR/frontend && GITHUB_TOKEN=<token> npm ci && npm run build"
+            fi
+        else
+            log_warn "No GITHUB_TOKEN — skipping frontend build (API still works)"
+        fi
+    fi
+
+    # Deploy built frontend
     if [[ -d "$dist_dir" && -f "$dist_dir/index.html" ]]; then
         mkdir -p /var/www/linbo
         cp -r "$dist_dir"/* /var/www/linbo/
         log_ok "Frontend deployed to /var/www/linbo"
     else
-        log_warn "No frontend build at $dist_dir — UI won't be available"
-        log_warn "Build with: cd frontend && npm run build"
+        mkdir -p /var/www/linbo
+        log_warn "No frontend — API-only mode (UI at http://localhost:3000/docs)"
     fi
 
-    # nginx site config (idempotent — skip if already exists)
-    if [[ ! -f /etc/nginx/sites-available/linbo ]]; then
-        cat > /etc/nginx/sites-available/linbo << 'NGINXEOF'
+    # nginx site config (always regenerate to pick up fixes)
+    cat > /etc/nginx/sites-available/linbo << 'NGINXEOF'
 server {
     listen 80 default_server;
     server_name _;
     root /var/www/linbo;
     index index.html;
 
+    # API reverse proxy
     location /api/ {
         proxy_pass http://127.0.0.1:3000;
         proxy_set_header Host $host;
@@ -767,6 +806,16 @@ server {
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
     }
 
+    # Health + Docs — proxy to API
+    location /health {
+        proxy_pass http://127.0.0.1:3000;
+    }
+
+    location /docs {
+        proxy_pass http://127.0.0.1:3000;
+    }
+
+    # WebSocket
     location /ws {
         proxy_pass http://127.0.0.1:3000;
         proxy_http_version 1.1;
@@ -774,15 +823,13 @@ server {
         proxy_set_header Connection "upgrade";
     }
 
+    # Frontend SPA (=404 prevents redirect loop when index.html is missing)
     location / {
-        try_files $uri $uri/ /index.html;
+        try_files $uri $uri/ /index.html =404;
     }
 }
 NGINXEOF
-        log_ok "nginx site config created"
-    else
-        log_ok "nginx site config already exists"
-    fi
+    log_ok "nginx site config written"
 
     ln -sf /etc/nginx/sites-available/linbo /etc/nginx/sites-enabled/
     rm -f /etc/nginx/sites-enabled/default
@@ -863,6 +910,15 @@ print_summary() {
 # =============================================================================
 main() {
     print_banner
+
+    # Auto-install system dependencies if not present
+    if ! dpkg -l linuxmuster-linbo7 2>/dev/null | grep -q '^ii' \
+       || ! command -v node &>/dev/null \
+       || ! command -v nginx &>/dev/null; then
+        log_info "System dependencies missing — running install.sh..."
+        "$SCRIPT_DIR/install.sh"
+    fi
+
     run_prerequisites
     check_ports
     prompt_lmn_connection
