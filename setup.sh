@@ -432,6 +432,16 @@ create_linbo_user() {
     else
         log_info "/srv/linbo not yet present — setup-bootfiles.sh will set permissions after APT install"
     fi
+
+    # /var/lib/linbo — drivers directory (patchclass profiles)
+    if [[ -d /var/lib/linbo ]]; then
+        chown -R linbo:linbo /var/lib/linbo
+        log_ok "Ownership set: /var/lib/linbo (linbo:linbo)"
+    else
+        mkdir -p /var/lib/linbo/drivers
+        chown -R linbo:linbo /var/lib/linbo
+        log_ok "Created: /var/lib/linbo/drivers (linbo:linbo)"
+    fi
 }
 
 # =============================================================================
