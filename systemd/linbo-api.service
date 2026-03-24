@@ -26,7 +26,7 @@ ProtectSystem=strict
 ProtectHome=yes
 PrivateTmp=yes
 NoNewPrivileges=yes
-ReadWritePaths=/srv/linbo /srv/linbo-api /var/lib/linbo-native /var/lib/linbo-api /var/lib/linbo /etc/linuxmuster /etc/dhcp /var/run /var/log/linbo-native
+ReadWritePaths=/srv/linbo /srv/linbo-api /var/lib/linbo-native /var/lib/linbo-api /var/lib/linbo /var/cache/linuxmuster /etc/linuxmuster /etc/dhcp /var/run /var/log/linbo-native
 MemoryMax=1G
 LimitNOFILE=65536
 
