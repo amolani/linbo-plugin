@@ -869,7 +869,86 @@ NGINXEOF
 }
 
 # =============================================================================
-# 15. Start services
+# 15. DHCP scaffold (dhcpd.conf with PXE boot options)
+# =============================================================================
+setup_dhcp() {
+    if [[ -x "$SCRIPT_DIR/scripts/server/setup-dhcp.sh" ]]; then
+        log_info "Setting up DHCP..."
+        "$SCRIPT_DIR/scripts/server/setup-dhcp.sh" --force
+    else
+        log_warn "setup-dhcp.sh not found — DHCP not configured"
+    fi
+}
+
+# =============================================================================
+# 16. Initial sync + linbofs rebuild (after API is running)
+# =============================================================================
+initial_sync() {
+    if [[ "$SYNC_ENABLED" != "true" ]]; then
+        log_info "Sync disabled — skipping initial sync"
+        return 0
+    fi
+
+    # Wait for API to be ready
+    local retries=0
+    while ! curl -sf http://127.0.0.1:3000/health >/dev/null 2>&1; do
+        retries=$((retries + 1))
+        if [[ $retries -ge 30 ]]; then
+            log_warn "API not ready after 30s — skipping initial sync"
+            return 0
+        fi
+        sleep 1
+    done
+
+    log_info "Running initial sync from LMN server..."
+    local admin_pw_for_sync
+    admin_pw_for_sync=$(grep '^ADMIN_PASSWORD=' /etc/linbo-native/.env | cut -d= -f2-)
+    local token
+    token=$(curl -sf -X POST http://127.0.0.1:3000/api/v1/auth/login \
+        -H 'Content-Type: application/json' \
+        -d "{\"username\":\"admin\",\"password\":\"${admin_pw_for_sync}\"}" \
+        | python3 -c "import sys,json;print(json.load(sys.stdin)['data']['token'])" 2>/dev/null)
+
+    if [[ -z "$token" ]]; then
+        log_warn "Could not authenticate — skipping initial sync"
+        return 0
+    fi
+
+    # Trigger sync
+    local sync_result
+    sync_result=$(curl -sf -X POST http://127.0.0.1:3000/api/v1/sync/trigger \
+        -H "Authorization: Bearer $token" 2>/dev/null)
+
+    if echo "$sync_result" | python3 -c "import sys,json;d=json.load(sys.stdin);print(d.get('data',{}).get('success',''))" 2>/dev/null | grep -q "True"; then
+        log_ok "Initial sync completed"
+    else
+        log_warn "Initial sync may have failed — check: curl http://localhost:3000/api/v1/sync/status"
+    fi
+
+    # Rebuild linbofs64 (inject SSH keys + secrets)
+    log_info "Rebuilding linbofs64 (injecting SSH keys)..."
+    local rebuild_result
+    rebuild_result=$(curl -sf -X POST http://127.0.0.1:3000/api/v1/system/update-linbofs \
+        -H "Authorization: Bearer $token" --max-time 300 2>/dev/null)
+
+    if echo "$rebuild_result" | grep -q '"success"'; then
+        log_ok "linbofs64 rebuilt with SSH keys"
+    else
+        log_warn "linbofs64 rebuild may have failed — check: journalctl -u linbo-api"
+    fi
+
+    # Restart DHCP with fresh config from sync
+    if systemctl is-active --quiet isc-dhcp-server 2>/dev/null || [[ -f /etc/dhcp/dhcpd.conf ]]; then
+        if sudo dhcpd -t -cf /etc/dhcp/dhcpd.conf 2>/dev/null; then
+            systemctl restart isc-dhcp-server 2>/dev/null && log_ok "isc-dhcp-server restarted with synced config" || log_warn "DHCP restart failed"
+        else
+            log_warn "DHCP config test failed — not restarting"
+        fi
+    fi
+}
+
+# =============================================================================
+# 17. Start services
 # =============================================================================
 enable_services() {
     log_info "Starting services..."
@@ -954,7 +1033,9 @@ main() {
     fix_etc_hosts
     deploy_api
     deploy_frontend
+    setup_dhcp
     enable_services
+    initial_sync
     print_summary
 }
 
