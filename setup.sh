@@ -964,6 +964,27 @@ enable_services() {
     systemctl enable --now tftpd-hpa 2>/dev/null && log_ok "tftpd-hpa running" || log_warn "tftpd-hpa start failed"
     systemctl enable --now rsync 2>/dev/null && log_ok "rsync running" || log_warn "rsync start failed"
 
+    # Torrent: opentracker (tracker) + linbo-torrent (seeding)
+    if command -v opentracker &>/dev/null; then
+        if [[ ! -f /etc/systemd/system/opentracker.service ]]; then
+            cat > /etc/systemd/system/opentracker.service << 'OTEOF'
+[Unit]
+Description=OpenTracker service
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/sbin/opentracker -u nobody -d /srv/linbo
+
+[Install]
+WantedBy=multi-user.target
+OTEOF
+            systemctl daemon-reload
+        fi
+        systemctl enable --now opentracker 2>/dev/null && log_ok "opentracker running (port 6969)" || log_warn "opentracker start failed"
+        systemctl enable --now linbo-torrent 2>/dev/null && log_ok "linbo-torrent running" || log_warn "linbo-torrent start failed"
+    fi
+
     # Web
     systemctl enable --now nginx 2>/dev/null && log_ok "nginx running" || log_warn "nginx start failed"
 
