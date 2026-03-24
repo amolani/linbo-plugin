@@ -937,12 +937,12 @@ initial_sync() {
         log_warn "linbofs64 rebuild may have failed — check: journalctl -u linbo-api"
     fi
 
-    # Restart DHCP with fresh config from sync
-    if systemctl is-active --quiet isc-dhcp-server 2>/dev/null || [[ -f /etc/dhcp/dhcpd.conf ]]; then
-        if sudo dhcpd -t -cf /etc/dhcp/dhcpd.conf 2>/dev/null; then
-            systemctl restart isc-dhcp-server 2>/dev/null && log_ok "isc-dhcp-server restarted with synced config" || log_warn "DHCP restart failed"
+    # Enable and start DHCP with fresh config from sync
+    if [[ -f /etc/dhcp/dhcpd.conf ]]; then
+        if /usr/sbin/dhcpd -t -cf /etc/dhcp/dhcpd.conf 2>/dev/null; then
+            systemctl enable --now isc-dhcp-server 2>/dev/null && log_ok "isc-dhcp-server enabled and started" || log_warn "DHCP start failed"
         else
-            log_warn "DHCP config test failed — not restarting"
+            log_warn "DHCP config test failed — not starting"
         fi
     fi
 }
